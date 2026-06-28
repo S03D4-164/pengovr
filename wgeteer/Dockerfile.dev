@@ -1,0 +1,63 @@
+FROM node@sha256:8efd3ed25d83b4328df873ed9853a5bd97ffce8eb3498785e45c3e7297571f0e
+
+ENV APP_HOME=/app/worker
+WORKDIR $APP_HOME
+
+ARG NODE_ENV=development
+ENV NODE_ENV=${NODE_ENV}
+ENV DBUS_SESSION_BUS_ADDRESS=autolaunch:
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+#EXPOSE 5900
+
+# aptパッケージのキャッシュを活用するために分離
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
+    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] https://dl-ssl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get purge -y --auto-remove wget gnupg
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install --no-install-recommends -y -o Acquire::Retries=3 -o Acquire::http::Timeout=300 \
+       libxss1 telnet xvfb google-chrome-stable dbus dbus-x11 procps fluxbox scrot \
+       fonts-ipafont-gothic fonts-nanum fonts-wqy-microhei fonts-dejavu-core fonts-droid-fallback fonts-liberation fonts-noto-core fonts-noto-color-emoji fonts-opensymbol fonts-urw-base35 locales \
+    && echo "ja_JP.UTF-8 UTF-8" >> /etc/locale.gen \
+    && locale-gen \
+    && mkdir -p $APP_HOME && chown -R node:node /app \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /src/*.deb /usr/share/icons/Adwaita /usr/share/icons/hicolor /usr/share/doc \
+    && cd /opt/google/chrome/locales && find . -type f ! -name 'en-US.pak' ! -name 'ja.pak' -delete
+
+ENV LANG=ja_JP.UTF-8
+ENV LC_ALL=ja_JP.UTF-8
+
+# pnpm 11 の直接インストール（ダウンロード回避）
+RUN npm install -g pnpm@11.5.2 && npm cache clean --force
+
+# 依存関係ファイルのみ先にコピー
+COPY --chown=node:node wgeteer/package.json ./package.json
+COPY --chown=node:node wgeteer/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --chown=node:node wgeteer/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --chown=node:node wgeteer/ecosystem.config.cjs ./
+COPY --chown=node:node wgeteer/entrypoint.sh ./
+COPY --chown=node:node wgeteer/src ./src
+
+# Fluxbox 設定をビルド時に配置
+RUN mkdir -p /home/node/.fluxbox && chown node:node /home/node/.fluxbox
+COPY --chown=node:node wgeteer/fluxbox_init /home/node/.fluxbox/init
+
+# 最終的な権限調整とログディレクトリ作成（特定のターゲットのみ実施）
+RUN mkdir -p ./logs && \
+    chown node:node ./logs && \
+    chmod +x ./entrypoint.sh
+
+USER node
+
+# 依存関係インストール
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store
+
+CMD ["/bin/bash", "./entrypoint.sh"]

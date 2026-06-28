@@ -1,0 +1,37 @@
+FROM node@sha256:8efd3ed25d83b4328df873ed9853a5bd97ffce8eb3498785e45c3e7297571f0e
+
+ENV APP_HOME=/app/api
+WORKDIR $APP_HOME
+
+# pnpm 11 の直接インストール（root権限が必要）
+RUN npm install -g pnpm@11.5.2
+
+RUN chown -R node:node /app
+
+# 対話モードによるエラーを完全に防ぐ
+ENV CI=true
+
+# nodeユーザーに切り替え
+USER node
+
+# 依存関係ファイルのみ先にコピー（レイヤーキャッシュ活用）
+COPY --chown=node:node api/package.json ./package.json
+COPY --chown=node:node api/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --chown=node:node api/tsconfig.json ./tsconfig.json
+COPY --chown=node:node api/ecosystem.config.cjs ./ecosystem.config.cjs
+
+# 依存関係をインストール
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store --ignore-scripts
+
+# ソースコードをコピー
+COPY --chown=node:node api/src ./src
+
+# logsディレクトリ作成（PM2用）- nodeユーザーで作成される
+#RUN mkdir -p api/logs
+
+# Expose port
+EXPOSE 3000
+
+# 3. 起動コマンドをPM2から「直接起動」に変更して安定化
+CMD ["pnpm", "exec", "pm2", "start", "ecosystem.config.cjs", "--no-daemon"]

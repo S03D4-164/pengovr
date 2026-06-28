@@ -1,0 +1,57 @@
+# ==========================================
+# 1. ビルド用のステージ（開発ツールも全部入れてJSに変換する）
+# ==========================================
+FROM node@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS builder
+
+ENV APP_HOME=/app/enricher
+WORKDIR $APP_HOME
+
+RUN npm install -g pnpm@11.5.2
+
+COPY enricher/package.json enricher/pnpm-lock.yaml enricher/pnpm-workspace.yaml enricher/tsconfig.json ./
+
+RUN --mount=type=cache,id=pnpm-root,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir=/root/.local/share/pnpm/store
+
+# ソースコードをコピーして JavaScript にコンパイル
+COPY enricher/src ./src
+
+RUN pnpm build 
+
+# ==========================================
+# 2. 本番実行用のステージ（成果物と本番用ライブラリだけを残す）
+# ==========================================
+FROM node@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS runner
+
+ENV APP_HOME=/app/enricher
+WORKDIR $APP_HOME
+
+# 必要最小限のパッケージのみインストール
+# ※ Alpine Linuxのパッケージマネージャ(apk)を使用
+RUN apk update && apk add --no-cache \
+    wget \
+    curl \
+    ca-certificates \
+    unzip \
+    && chown node:node $APP_HOME
+
+# pnpm 11 の直接インストール
+RUN npm install -g pnpm@11.5.2 && npm cache clean --force
+
+# 1. 依存関係ファイルのみ先にコピー（レイヤーキャッシュ活用）
+COPY --chown=node:node enricher/package.json enricher/pnpm-lock.yaml enricher/pnpm-workspace.yaml enricher/tsconfig.json ./
+
+# 2. 依存関係インストール
+USER node
+
+RUN --mount=type=cache,id=pnpm-node,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --prod --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store \
+    && pnpm store prune
+
+# 3. IPデータベースダウンロード用スクリプトをコピーして実行
+COPY --chown=node:node enricher/scripts/ ./scripts/
+RUN node scripts/download-ip-dbs.cjs
+
+COPY --chown=node:node --from=builder /app/enricher/dist ./dist
+
+CMD ["node", "dist/index.js"]

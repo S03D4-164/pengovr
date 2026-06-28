@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "pengovr-admin",
+      "credentials": [
+        {
+          "accessKey": "pengovr-admin",
+          "secretKey": "pengovr-password"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging", "Admin"]
+    }
+  ]
+}

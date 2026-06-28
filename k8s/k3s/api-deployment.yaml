@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: pengovr
+  labels:
+    app: api
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: pengovr
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: pengovr-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: WORKER_NODE_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: worker-node-ip
+            - name: NODE_ENV
+              value: 'production'
+            # MongoDBのService名が 'mongo' の場合
+            - name: MONGODB_URI
+              value: 'mongodb://mongo:27017/webscraping'
+            - name: REDIS_HOST
+              value: '$(WORKER_NODE_IP)'
+            - name: REDIS_PORT
+              value: '30063' # NodePort for Redis on the worker node
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: redis-password
+            - name: QUEUE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: queue-name
+            - name: ENRICHMENT_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-config
+                  key: enrichment-queue
+            - name: S3_ENDPOINT
+              value: 'http://$(WORKER_NODE_IP):30033' # NodePort for SeaweedFS S3 API on the worker node
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: access-key
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: secret-key
+            - name: S3_BUCKET
+              value: 'pengovr-assets'
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '200m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'

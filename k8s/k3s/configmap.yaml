@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: pengovr
+data:
+  # deploy.sh内のsedによってYOUR_WORKER_NODE_EXTERNAL_IPが置換されます
+  worker-node-ip: '172.18.102.99'
+  queue-name: 'scraping-tasks'
+  enrichment-queue: 'enrichment-tasks'

@@ -1,0 +1,37 @@
+{
+  "name": "wgeteer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "dev": "node --import tsx/esm --watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "pm2": "DEBUG='custom:*' pm2 --no-daemon start ecosystem.config.cjs"
+  },
+  "dependencies": {
+    "@virustotal/yara-x": "^1.15.0",
+    "@aws-sdk/client-s3": "^3.1053.0",
+    "@zip.js/zip.js": "^2.8.26",
+    "baseline-browser-mapping": "^2.8.30",
+    "bullmq": "^5.58.4",
+    "chrome-launcher": "^1.2.0",
+    "csv-parser": "^3.2.0",
+    "find-process": "^1.4.7",
+    "jimp": "^1.6.1",
+    "playwright-core": "^1.56.1",
+    "pm2": "^6.0.6",
+    "rebrowser-playwright-core": "1.52.0",
+    "tsx": "^4.22.4",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.2",
+    "@types/puppeteer": "^5.4.7",
+    "globals": "^15.8.0",
+    "prettier": "^3.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}

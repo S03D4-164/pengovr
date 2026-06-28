@@ -1,0 +1,66 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-redis-auth
+  namespace: pengovr
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: pengovr-secrets
+      key: redis-password
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaler
+  namespace: pengovr
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  triggers:
+    - type: redis
+      authenticationRef:
+        name: keda-redis-auth
+      metadata:
+        address: redis.pengovr.svc.cluster.local:6379
+        # scraping-tasksの未処理リストをダイレクトに監視
+        listName: 'bull:scraping-tasks:wait'
+        # 待機ジョブが1件溜まるごとに1ポッド増やす設定
+        listLength: '1'
+        # 1件でもジョブがあれば即座にアクティベーション（スケール開始）する
+        activationListLength: '1'
+    - type: redis
+      authenticationRef:
+        name: keda-redis-auth
+      metadata:
+        address: redis.pengovr.svc.cluster.local:6379
+        listName: bull:scraping-tasks:delayed
+        type: zset # 👈 delayedはSorted Set型なので zset を指定
+        listLength: '1' # delayedに1件でもあれば起動
+        activationListLength: '1'
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: enricher-scaler
+  namespace: pengovr
+spec:
+  scaleTargetRef:
+    name: enricher
+  minReplicaCount: 0
+  maxReplicaCount: 2
+  triggers:
+    - type: redis
+      authenticationRef:
+        name: keda-redis-auth
+      metadata:
+        address: redis.pengovr.svc.cluster.local:6379
+        # scraping-tasksの未処理リストをダイレクトに監視
+        listName: 'bull:enrichment-tasks:wait'
+        # 待機ジョブが2件溜まるごとに1ポッド増やす設定
+        listLength: '2'
+        # 1件でもジョブがあれば即座にアクティベーション（スケール開始）する
+        activationListLength: '1'

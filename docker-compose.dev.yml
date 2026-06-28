@@ -1,0 +1,153 @@
+services:
+  # MongoDB Replica Set - Primary
+  mongo1:
+    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    container_name: mongo1
+    hostname: mongo1
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo1-data:/data/db
+    networks:
+      - app-network
+    command: >
+      mongod --replSet rs0 --bind_ip_all
+
+  # MongoDB Replica Set - Secondary
+  mongo2:
+    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    container_name: mongo2
+    hostname: mongo2
+    ports:
+      - '127.0.0.1:27018:27017'
+    volumes:
+      - mongo2-data:/data/db
+    networks:
+      - app-network
+    command: >
+      mongod --replSet rs0 --bind_ip_all
+    depends_on:
+      - mongo1
+
+  # MongoDB Replica Set - Arbiter
+  mongo3:
+    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    container_name: mongo3
+    hostname: mongo3
+    ports:
+      - '127.0.0.1:27019:27017'
+    volumes:
+      - mongo3-data:/data/db
+    networks:
+      - app-network
+    command: >
+      mongod --replSet rs0 --bind_ip_all
+    depends_on:
+      - mongo2
+
+  # Initialize MongoDB Replica Set
+  mongo-setup:
+    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    container_name: mongo-setup
+    networks:
+      - app-network
+    depends_on:
+      - mongo3
+    entrypoint: >
+      bash -c "
+        echo 'Waiting for MongoDB nodes...' &&
+        sleep 5 &&
+        mongosh --host mongo1:27017 --eval '
+          try {
+            rs.status();
+            print(\"Replica set already initialized\");
+          } catch (e) {
+            if (e.codeName === \"NotYetInitialized\") {
+              rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongo1:27017\", priority: 2}, {_id: 1, host: \"mongo2:27017\", priority: 1}, {_id: 2, host: \"mongo3:27017\", arbiterOnly: true}]});
+              print(\"Replica set initialized\");
+            } else {
+              throw e;
+            }
+          }
+        ' &&
+        echo 'Setup complete'
+      "
+    restart: 'no'
+
+  # API Service
+  api-dev:
+    build:
+      context: .
+      dockerfile: api/Dockerfile.dev
+      args:
+        - DOCKER_BUILDKIT=1
+      cache_from:
+        - api-dev:latest
+    container_name: api-dev
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo1:27017,mongo2:27017/webscraping?replicaSet=rs0
+      - REDIS_HOST=127.0.0.1
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD
+      - QUEUE_NAME=scraping-tasks
+      - S3_ENDPOINT=http://127.0.0.1:8333
+      - S3_ACCESS_KEY=pengovr-admin
+      - S3_SECRET_KEY=pengovr-password
+      - S3_BUCKET=pengovr-assets
+      - CI=true
+    volumes:
+      - ./api/:/app/api
+      - api-node-modules:/app/api/node_modules
+    working_dir: /app/api
+    command: pnpm exec pm2 start ecosystem.config.cjs --no-daemon
+    depends_on:
+      - mongo3
+    restart: unless-stopped
+    network_mode: host
+    extra_hosts:
+      - 'mongo1:127.0.0.1'
+      - 'mongo2:127.0.0.1'
+
+  # UI Service - Development with hot reload
+  ui-dev:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile.dev
+      args:
+        - DOCKER_BUILDKIT=1
+      cache_from:
+        - ui-dev:latest
+    container_name: ui-dev
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+      - CI=true
+    volumes:
+      - ./ui/:/app/ui
+      - ui-node-modules:/app/ui/node_modules
+    working_dir: /app/ui
+    command: pnpm run dev
+    tty: true
+    init: true
+    depends_on:
+      - api-dev
+    network_mode: host
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+    name: pengovr-network
+
+volumes:
+  mongo1-data:
+  mongo2-data:
+  mongo3-data:
+  api-node-modules:
+  ui-node-modules:

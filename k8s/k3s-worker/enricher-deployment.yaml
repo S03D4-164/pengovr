@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enricher
+  namespace: pengovr
+  labels:
+    app: enricher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enricher
+  template:
+    metadata:
+      labels:
+        app: enricher
+    spec:
+      containers:
+        - name: enricher
+          image: pengovr-enricher:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            # SeaweedFS (Cloud Cluster 内部通信)
+            - name: S3_ENDPOINT
+              value: 'http://seaweedfs:8333'
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: access-key
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: secret-key
+            - name: S3_BUCKET
+              value: 'pengovr-assets'
+            - name: REDIS_HOST
+              value: 'redis'
+            - name: REDIS_PORT
+              value: '6379'
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: redis-password
+            - name: NODE_ENV
+              value: 'production'
+            - name: ENRICHMENT_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: worker-config
+                  key: enrichment-queue
+            - name: GOSB_HOST
+              value: 'gosb'
+            - name: GOSB_PORT
+              value: '3002'
+            - name: VT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: vt-key
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: gemini-api-key
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '200m'
+            limits:
+              memory: '1Gi'
+              cpu: '500m'

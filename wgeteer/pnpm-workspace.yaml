@@ -1,0 +1,50 @@
+allowBuilds:
+  better-sqlite3: true
+  esbuild: false
+  msgpackr-extract: true
+
+# サプライチェーン攻撃対策設定
+# エキゾチックなソースをブロック（gitリポジトリ、直接tarball URL等）
+blockExoticSubdeps: true
+
+# スクリプト実行を無効化（悪意のあるpostinstallスクリプト対策）
+ignoreScripts: true
+
+# (オプション) 脆弱性が報告された直後のパッケージ使用を制限
+# リリースから7日未満のパッケージはインストールを警告/拒否（分単位で指定）
+minimumReleaseAge: 10080
+
+# 最低リリース年齢チェックを厳格化（条件を満たさない場合は失敗）
+minimumReleaseAgeStrict: true
+
+# 依存関係の解決を厳格化 (node_modules の構造を予測可能にする)
+# 'hoisted' または 'isolated' を明示
+nodeLinker: 'isolated'
+
+# 依存関係の整合性チェック
+preferFrozenLockfile: true
+
+# レジストリ設定
+registries:
+  default: 'https://registry.npmjs.org/'
+
+# ワークスペースルートからピア依存関係を解決
+resolvePeersFromWorkspaceRoot: true
+
+# ピア依存関係を厳格化
+strictPeerDependencies: true
+
+# ストアの厳格なコンテンツチェック
+strictStorePkgContentCheck: true
+
+# トラストポリシー（信頼レベルが低下した場合はインストール失敗）
+trustPolicy: no-downgrade
+
+# トラストポリシーの例外
+trustPolicyExclude: []
+
+# 古いパッケージはトラストポリシーの低下を無視（例えば1年以上前）
+trustPolicyIgnoreAfter: 525600
+
+# パッケージの整合性チェックを強制
+verifyStoreIntegrity: true

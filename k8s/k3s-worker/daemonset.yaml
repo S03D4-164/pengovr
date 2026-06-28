@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: worker-image-prepuller
+  namespace: pengovr
+spec:
+  selector:
+    matchLabels:
+      name: image-prepuller
+  template:
+    metadata:
+      labels:
+        name: image-prepuller
+    spec:
+      initContainers:
+        - name: puller
+          image: pengovr-worker:latest
+          # 💡 追加：ネットに見に行かず、ローカルのイメージを強制的に使用させる
+          imagePullPolicy: IfNotPresent
+          command: ['echo', 'Image pulled successfully']
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause@sha256:8d4106c88ec0bd28001e34c975d65175d994072d65341f62a8ab0754b0fafe10
+          # 完了後は何もしない軽量コンテナを置いておく

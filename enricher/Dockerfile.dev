@@ -1,0 +1,35 @@
+FROM node@sha256:8efd3ed25d83b4328df873ed9853a5bd97ffce8eb3498785e45c3e7297571f0e
+
+ENV APP_HOME=/app/enricher
+WORKDIR $APP_HOME
+
+# 必要最小限のパッケージのみインストール（キャッシュマウントで高速化）
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install --no-install-recommends -y wget curl ca-certificates unzip \
+    && mkdir -p $APP_HOME \
+    && chown -R node:node /app
+
+# pnpm 11 の直接インストール（ダウンロード回避）
+RUN npm install -g pnpm@11.5.2
+
+# 1. 依存関係ファイルのみ先にコピー（レイヤーキャッシュ活用）
+COPY --chown=node:node enricher/package.json ./
+COPY --chown=node:node enricher/pnpm-lock.yaml ./
+COPY --chown=node:node enricher/pnpm-workspace.yaml ./
+COPY --chown=node:node enricher/scripts/ ./scripts/
+COPY --chown=node:node enricher/ecosystem.config.cjs ./
+COPY --chown=node:node enricher/src/ ./src
+
+USER node
+
+# 2. 依存関係インストール
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store
+
+# 3. IPデータベースダウンロード用スクリプトをコピーして実行
+RUN node scripts/download-ip-dbs.cjs
+
+# Start command
+CMD ["pnpm", "exec", "pm2", "start", "ecosystem.config.cjs", "--no-daemon"]

@@ -1,0 +1,15 @@
+# --- ConfigMap (Centralized Environment Config) ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-config
+  namespace: pengovr
+data:
+  # コア側（API/DBがある方）のサーバーIPアドレスを指定してください
+  core-ip: '172.18.102.99'
+
+  # キュー名などの共通設定
+  queue-name: 'scraping-tasks'
+  enrichment-queue: 'enrichment-tasks'
+  gosb-host: 'gosb'
+  gosb-port: '3002'

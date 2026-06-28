@@ -1,0 +1,70 @@
+# ==========================================
+# 1. ビルド用のステージ（開発ツールも全部入れてJSに変換する）
+# ==========================================
+FROM node@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS builder
+
+ENV APP_HOME=/app/worker
+WORKDIR $APP_HOME
+
+RUN npm install -g pnpm@11.5.2
+
+COPY wgeteer/package.json wgeteer/pnpm-lock.yaml wgeteer/pnpm-workspace.yaml wgeteer/tsconfig.json ./
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir=/root/.local/share/pnpm/store
+
+# ソースコードをコピーして JavaScript にコンパイル
+COPY wgeteer/src ./src
+
+RUN pnpm build 
+
+# ==========================================
+# 2. 本番実行用のステージ（成果物と本番用ライブラリだけを残す）
+# ==========================================
+FROM node@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS runner
+
+ENV APP_HOME=/app/worker
+WORKDIR $APP_HOME
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+ENV DBUS_SESSION_BUS_ADDRESS=autolaunch:
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+# AlpineのChromiumを使用するための設定
+ENV CHROME_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Chromiumやフォントなど、実行に必要なOSパッケージを入れる
+# ※ Alpine Linuxのパッケージマネージャ(apk)を使用
+RUN apk update && apk add --no-cache \
+    chromium \
+    xvfb \
+    dbus \
+    dbus-x11 \
+    procps \
+    fluxbox \
+    scrot \
+    font-wqy-zenhei \
+    font-noto-emoji \
+    ttf-freefont \
+    font-liberation \
+    && chown node:node $APP_HOME
+
+# 本番用の必要最低限のライブラリだけをインストール (--prod)
+COPY --chown=node:node wgeteer/package.json wgeteer/pnpm-lock.yaml wgeteer/pnpm-workspace.yaml ./
+
+RUN npm install -g pnpm@11.5.2
+
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --prod --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store \
+    && pnpm store prune
+
+# ★ 1のステージで出来上がった「JavaScriptのファイルだけ」をコピー
+COPY --chown=node:node --from=builder /app/worker/dist ./dist
+
+# Fluxbox 設定などをコピー
+RUN mkdir -p /home/node/.fluxbox
+COPY --chown=node:node worker/fluxbox_init /home/node/.fluxbox/init
+
+USER node
+
+CMD ["node", "dist/index.js"]

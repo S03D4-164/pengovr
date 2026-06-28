@@ -1,0 +1,541 @@
+import { BrowserContext, Page, chromium } from 'rebrowser-playwright-core';
+//process.env.REBROWSER_PATCHES_DEBUG = '1';
+process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE = 'addBinding';
+import { protectIt } from './playwright-afp/index.js';
+
+import logger from './logger.js';
+import { saveRequest, saveResponse } from './playwgetIntercept.js';
+import {
+  cdpScreenshot,
+  imgResize,
+  saveFullscreenshot,
+} from './playwgetScreenshot.js';
+
+import checkTurnstile from './turnstile.js';
+
+import fs from 'fs';
+import { execSync } from 'child_process';
+import { Xvfb } from './node-xvfb/index.js';
+import { spawn } from 'node:child_process';
+import cleanup from './playwgetCleanup.js';
+import { playwgetAction } from './playwgetAction.js';
+import pptrEventSet from './playwgetEvent.js';
+
+const dataDir = '/tmp/ppengo';
+
+async function genPage(
+  webpage: any,
+  chromiumArgs: any,
+  payloadsCollector?: any[],
+  screenshotsCollector?: any[],
+): Promise<{
+  page: Page;
+  browserContext: BrowserContext;
+}> {
+  const pageId = webpage._id;
+  const userDataDir = `${dataDir}/${pageId}`;
+  //logger.debug(`${userDataDir}`);
+  let options: any = {
+    executablePath: process.env.CHROME_EXECUTABLE_PATH,
+    //executablePath: '/usr/bin/google-chrome-stable',
+    channel: 'chrome',
+    headless: false,
+    viewport: null,
+    recordHar: { path: `${userDataDir}/pw.har` },
+    ignoreHTTPSErrors: true,
+    args: chromiumArgs,
+    ignoreDefaultArgs: ['--enable-automation'], // hide infobar
+    javaScriptEnabled: true,
+    timezoneId: 'Asia/Tokyo',
+  };
+  let exHeaders: Record<string, string> = {};
+  if (webpage.option?.lang) {
+    exHeaders['Accept-Language'] = webpage.option.lang;
+  }
+  if (webpage.option?.userAgent && webpage.option.userAgent.length > 1) {
+    options.userAgent = webpage.option.userAgent;
+  }
+  if (webpage.option?.disableScript) {
+    options.javaScriptEnabled = false;
+  }
+  if (webpage.option?.exHeaders) {
+    for (const line of webpage.option.exHeaders.split('\r\n')) {
+      const match = line.match(/^([^:]+):(.+)$/);
+      if (match && match.length >= 3) {
+        exHeaders[match[1].trim()] = match[2].trim();
+      }
+    }
+  }
+  if (exHeaders) {
+    options.extraHTTPHeaders = exHeaders;
+  }
+  try {
+    const browserContext = await chromium.launchPersistentContext(
+      userDataDir,
+      options,
+    );
+    const permissions = ['notifications'];
+    await browserContext.grantPermissions(permissions);
+    //browserContext.setDefaultTimeout(30000);
+    //const pages = browserContext.pages();
+    //let page = pages[0];
+    let page = await browserContext.newPage();
+    //if (webpage.option?.afp)
+    await protectIt(page, {});
+    await pptrEventSet(
+      browserContext,
+      page,
+      webpage,
+      payloadsCollector,
+      screenshotsCollector,
+    );
+    return {
+      page: page as Page,
+      browserContext: browserContext as BrowserContext,
+    };
+  } catch (err) {
+    logger.error(`[${pageId}] ${err}`);
+  }
+  return { page: null as any, browserContext: null as any };
+}
+
+async function playwget(webpage: any): Promise<any> {
+  const pageId = webpage._id;
+  logger.debug(`[${pageId}] playwget start`);
+
+  // Initialize screenshots array if it doesn't exist
+  webpage.screenshots = webpage.screenshots || [];
+
+  if (webpage.url || webpage.title) {
+    logger.debug(`[${pageId}] job has been terminated.`);
+    return webpage;
+  }
+
+  const displayNum = `${Math.floor(Math.random() * (99999 - 99)) + 99}`;
+  await cleanup(pageId, undefined);
+
+  const chromiumArgs = [
+    '--no-sandbox',
+    '--start-maximized',
+    '--disable-setuid-sandbox',
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+    '--disable-blink-features=AutomationControlled',
+    '--disable-automation',
+    '--disable-infobars',
+    `--display=:${displayNum}`,
+    //'--disable-websecurity',
+  ];
+  if (webpage.option?.proxy) {
+    if (
+      webpage.option.proxy.match(/^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}:\d{1,5}$/)
+    ) {
+      chromiumArgs.push(`--proxy-server=${webpage.option.proxy}`);
+    }
+  }
+  //logger.debug(webpage.option);
+
+  const xvfb = new Xvfb({
+    displayNum,
+    reuse: false,
+    timeout: 1000,
+    silent: false,
+    xvfb_args: [
+      '-screen',
+      '0',
+      '1280x720x24',
+      '-ac',
+      '-nolisten',
+      'tcp',
+      '-nolisten',
+      'unix',
+    ],
+  });
+  xvfb.startSync();
+  await new Promise((done) => setTimeout(done, 3000));
+
+  const fluxbox = spawn(
+    '/usr/bin/fluxbox',
+    ['-display', `:${displayNum}`, '-screen', '0'],
+    { detached: true, timeout: 5 * 60 * 1000 },
+  );
+  await new Promise((done) => setTimeout(done, 3000));
+
+  await fs.promises.mkdir(`${dataDir}/${webpage._id}`, { recursive: true });
+  await fs.promises.writeFile(
+    `${dataDir}/${webpage._id}/displayNum`,
+    displayNum,
+  );
+
+  let payloadsCollector: any[] = [];
+  let screenshotsCollector: any[] = [];
+
+  let { page, browserContext } = await genPage(
+    webpage,
+    chromiumArgs,
+    payloadsCollector,
+    screenshotsCollector,
+  );
+
+  if (!page || !browserContext) {
+    logger.error(`[${pageId}] Failed to create page or browser context`);
+    return;
+  }
+  //const browser = browserContext.browser();
+
+  await page.setViewportSize({ width: 1280, height: 600 });
+  let waitUntilOption: 'load' | 'domcontentloaded' | 'networkidle' | 'commit' =
+    'load';
+  if (webpage.option?.dom) {
+    waitUntilOption = 'domcontentloaded';
+  }
+
+  const client = await page.context().newCDPSession(page);
+
+  //intercept
+  let responseCache: any[] = [];
+  let requestArray: any[] = [];
+  let responseArray: any[] = [];
+  let wsObj: any = {};
+
+  // websocket
+  await client.send('Network.enable');
+  client.on('Network.webSocketClosed', async (ws) => {
+    console.log('closed', ws);
+  });
+  client.on('Network.webSocketCreated', async (ws) => {
+    //console.log('created', wsObj);
+    wsObj[ws.requestId] = {
+      url: ws.url,
+      request: {},
+      response: {},
+      messages: [],
+    };
+  });
+  client.on('Network.webSocketFrameError', async (ws) => {
+    //console.log('error', ws);
+    wsObj[ws.requestId]['response'] = {};
+    wsObj[ws.requestId]['messages'].push(ws.errorMessage);
+    await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+  });
+  client.on('Network.webSocketFrameReceived', async (ws) => {
+    //console.log('received', ws);
+    let msg = {
+      frame: 'received',
+      ...ws,
+    };
+    wsObj[ws.requestId]['messages'].push(msg);
+  });
+  client.on('Network.webSocketFrameSent', async (ws) => {
+    //console.log('sent', ws);
+    let msg = {
+      frame: 'sent',
+      ...ws,
+    };
+    wsObj[ws.requestId]['messages'].push(msg);
+  });
+  client.on('Network.webSocketHandshakeResponseReceived', async (ws) => {
+    //console.log('response', ws);
+    wsObj[ws.requestId]['response'] = ws.response;
+    await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+  });
+  client.on('Network.webSocketWillSendHandshakeRequest', async (ws) => {
+    //console.log('request', ws);
+    wsObj[ws.requestId]['request'] = ws.request;
+  });
+
+  async function wsObjToArray(ws: any, interceptionId: String) {
+    console.log(ws);
+    try {
+      const req = {
+        webpage: pageId,
+        url: ws.url,
+        headers: ws.request?.headers,
+        interceptionId,
+      };
+      const res = {
+        webpage: pageId,
+        url: ws.url,
+        status: ws.response?.status,
+        statusText: ws.response?.statusText,
+        headers: ws.response?.headers,
+        interceptionId,
+      };
+      if (res && responseArray != null) {
+        responseArray.push(res);
+      }
+      if (req && requestArray != null) {
+        requestArray.push(req);
+      }
+    } catch (error: any) {
+      logger.error(error);
+    }
+  }
+
+  await client.send('Fetch.enable', {
+    patterns: [
+      {
+        urlPattern: '*',
+        requestStage: 'Response',
+      },
+    ],
+  });
+  client.on(
+    'Fetch.requestPaused',
+    async ({ requestId, request, responseStatusCode }: any) => {
+      /*logger.debug(
+        `[Intercepted] ${requestId}, ${responseStatusCode}, ${request.url}`,
+      );*/
+      let cache: {
+        url: string;
+        status: number;
+        body: string | Buffer | null;
+        interceptionId: string;
+      } = {
+        url: request.url,
+        status: responseStatusCode || 0,
+        body: null,
+        interceptionId: requestId,
+      };
+      try {
+        if (requestId) {
+          let response = await client.send('Fetch.getResponseBody', {
+            requestId,
+          });
+          let newBody = (response as { body: string; base64Encoded: boolean })
+            .base64Encoded
+            ? Buffer.from(
+                (response as { body: string; base64Encoded: boolean }).body,
+                'base64',
+              )
+            : (response as { body: string; base64Encoded: boolean }).body;
+          cache.body = newBody;
+        }
+      } catch (err: any) {
+        if (err.message) {
+          /*logger.debug(
+            `[Intercepted] ${err.message} ${responseStatusCode} ${request.url}`,
+          );*/
+        }
+      }
+      responseCache.push(cache);
+
+      try {
+        if (client)
+          await client.send('Fetch.continueRequest', {
+            requestId,
+          });
+      } catch (err: any) {
+        logger.debug(err);
+      }
+    },
+  );
+  page.on('requestfailed', async function (request: any) {
+    await docToArray(request);
+  });
+
+  page.on('requestfinished', async function (request: any) {
+    await docToArray(request);
+  });
+
+  async function docToArray(request: any): Promise<void> {
+    try {
+      /*
+      logger.debug(
+        `[Request] finished: ${request.method()} ${request.url().slice(0, 100)}`,
+      );
+      */
+      let req: any = await saveRequest(request, pageId);
+      //console.log(req);
+      const response = await request.response();
+      let res;
+      if (response) {
+        /*
+        logger.debug(
+          `[Request] response: ${response.status()} ${response.url().slice(0, 100)}`,
+        );
+        */
+        res = await saveResponse(
+          response,
+          pageId,
+          responseCache,
+          payloadsCollector,
+        );
+        if (res && responseArray != null) {
+          responseArray.push(res);
+        }
+        req.interceptionId = res?.interceptionId;
+      }
+      if (req && requestArray != null) {
+        requestArray.push(req);
+      }
+    } catch (error: any) {
+      logger.error(error);
+    }
+  }
+  /*
+
+  // Store the favicon data here
+  const faviconData: { [url: string]: any } = {};
+
+  // Listen for favicon responses
+  client.on('Network.responseReceived', async (params) => {
+    const { response, requestId } = params; // Extract requestId here
+    console.log(response.url);
+    if (
+      response.url.endsWith('favicon.ico') ||
+      response.url.includes('/favicon')
+    ) {
+      //console.log(`Favicon response received: ${response.url}`);
+      // Fetch response body via CDP using the correct requestId
+      const { body, base64Encoded } = await client.send(
+        'Network.getResponseBody',
+        { requestId },
+      );
+      // Store or process the favicon data
+      faviconData[response.url] = base64Encoded
+        ? Buffer.from(body, 'base64')
+        : body;
+    }
+  });
+  */
+  try {
+    await page.goto(webpage.input, {
+      timeout: webpage.option.timeout * 1000,
+      referer: webpage.option.referer,
+      waitUntil: waitUntilOption,
+    });
+    const delay = webpage.option.delay * 1000;
+    await new Promise((done) => setTimeout(done, delay));
+    // Turnstile check
+    await checkTurnstile(page);
+
+    await playwgetAction(
+      page,
+      webpage,
+      client,
+      payloadsCollector,
+      screenshotsCollector,
+    );
+  } catch (err: any) {
+    logger.error(`[${pageId}] ${page.isClosed()} ${err}`);
+    if (page.isClosed()) {
+      return;
+    } else {
+      webpage.error = err.message;
+    }
+  }
+  logger.debug(`[${pageId}] goto completed ${webpage.input}`);
+
+  try {
+    webpage.url = page.url();
+    logger.debug(`[${pageId}] ${webpage.url}`);
+    webpage.title = await page.title();
+    logger.debug(`[${pageId}] ${webpage.title}`);
+    webpage.content = await page.content();
+
+    const screenshot = await cdpScreenshot(client);
+    const resizedImg = await imgResize(screenshot);
+    webpage.thumbnail = resizedImg.toString('base64');
+    let fss = await saveFullscreenshot(screenshot, [], screenshotsCollector);
+    if (fss) {
+      webpage.screenshot = fss;
+    }
+    // 追加スクリーンショット (OSデスクトップ)
+    const pngPath = `${dataDir}/${pageId}/screenshot.png`;
+    try {
+      // -b オプションでサイレント（ビープ音なし）に設定できます
+      execSync(`DISPLAY=:${displayNum} scrot -b ${pngPath}`);
+      //console.log('スクリーンショットの撮影が完了しました');
+    } catch (error) {
+      console.error('スクリーンショットの撮影に失敗しました:', error);
+    }
+    if (fs.existsSync(pngPath)) {
+      const pngData = fs.readFileSync(pngPath);
+      let ssobj: any = {};
+      const resizedImg = await imgResize(pngData);
+      if (resizedImg) {
+        ssobj.thumbnail = resizedImg.toString('base64');
+      }
+      let tag = [
+        {
+          url: webpage.url,
+        },
+      ];
+      let fss = await saveFullscreenshot(pngData, tag, screenshotsCollector);
+      if (fss) {
+        ssobj.full = fss;
+      }
+      webpage.screenshots.push(ssobj);
+    }
+    /*
+    if (faviconData) {
+      for (const [url, data] of Object.entries(faviconData)) {
+        webpage.favicon.push({
+          url,
+          favicon: data.toString('base64'),
+        });
+      }
+    }
+    */
+  } catch (err: any) {
+    logger.error(`[${pageId}] ${page.isClosed()} ${err}`);
+    if (page.isClosed()) {
+      return;
+    } else {
+      if (!webpage.error) {
+        webpage.error = err.message;
+      }
+    }
+  }
+
+  // convert websocket messages to text
+  let tmpArray = [];
+  for (let res of responseArray) {
+    Object.entries(wsObj).forEach(([key, value]: any) => {
+      if (res.interceptionId == key) {
+        console.log(key, value);
+        res.text = JSON.stringify(value['messages'], null, 2);
+      }
+    });
+    //console.log(res);
+    tmpArray.push(res);
+  }
+  responseArray = tmpArray;
+
+  webpage.requests = requestArray;
+  webpage.responses = responseArray;
+  webpage.payloads_data = payloadsCollector;
+  webpage.screenshots_data = screenshotsCollector;
+
+  // Set remoteAddress and status from response that matches webpage URL
+  const matchingResponse = responseArray.find(
+    (res: any) => res.url === webpage.url,
+  );
+  if (matchingResponse) {
+    webpage.status = matchingResponse.status;
+    webpage.remoteAddress = matchingResponse.remoteAddress;
+    webpage.securityDetails = matchingResponse.securityDetails;
+    webpage.headers = matchingResponse.headers;
+    logger.info(
+      `[${pageId}] Set status (${webpage.status}) and metadata from matching response`,
+    );
+  }
+
+  try {
+    const browser = browserContext.browser();
+    await browserContext.close();
+    await new Promise((done) => setTimeout(done, 1000));
+    await browser?.close();
+    await new Promise((done) => setTimeout(done, 1000));
+    xvfb.stopSync();
+    logger.debug(`[${pageId}] playwget completed`);
+    return webpage;
+  } catch (err) {
+    logger.error(`[${pageId}] ${err}`);
+    return webpage;
+  }
+}
+
+export { genPage };
+export default playwget;

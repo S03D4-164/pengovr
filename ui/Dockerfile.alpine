@@ -1,0 +1,64 @@
+# Build stage
+FROM node@sha256:8efd3ed25d83b4328df873ed9853a5bd97ffce8eb3498785e45c3e7297571f0e AS builder
+
+ENV APP_HOME=/app/ui
+WORKDIR $APP_HOME
+
+RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
+
+# Copy package files
+COPY ui/package.json ui/pnpm-lock.yaml ui/tsconfig.json ui/vite.config.ts ui/index.html ./
+
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --ignore-scripts --prod --store-dir=/home/node/.local/share/pnpm/store
+
+# Copy source code
+COPY ui/src ./src
+
+# Build
+RUN pnpm run build
+
+# Production stage
+FROM nginx@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1
+
+# APIの接続先を環境変数で変更可能にする（デフォルトは api）
+ENV API_URL=http://api:3000
+ENV NGINX_ENVSUBST_FILTER=API_URL
+
+# Copy built files
+COPY --from=builder /app/ui/dist /usr/share/nginx/html
+
+# nginxの設定をテンプレートとしてコピー（起動時にenvsubstで環境変数が展開される）
+RUN mkdir -p /etc/nginx/templates && \
+    echo 'server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /admin/queues { \
+        proxy_pass ${API_URL}; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+    location /api { \
+        proxy_pass ${API_URL}; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+}' > /etc/nginx/templates/default.conf.template
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

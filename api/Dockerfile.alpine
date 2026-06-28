@@ -1,0 +1,49 @@
+# ==========================================
+# 1. ビルド用ステージ（TypeScriptコンパイル環境）
+# ==========================================
+FROM node@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14 AS builder
+
+ENV APP_HOME=/app/api
+WORKDIR $APP_HOME
+
+RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
+
+# 依存関係ファイルのコピー
+COPY api/package.json api/pnpm-lock.yaml api/tsconfig.json api/ecosystem.config.cjs ./
+
+# ビルドのために devDependencies も含めてすべてインストール（tscを確保）
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ソースコードとモデルのコピー
+COPY api/src ./src
+
+# TypeScript のビルド
+RUN pnpm build
+
+# ==========================================
+# 2. 本番実行用ステージ
+# ==========================================
+FROM node@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14 AS runner
+
+ENV APP_HOME=/app/api
+WORKDIR $APP_HOME
+
+RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
+
+# ディレクトリの所有権を一括設定
+RUN mkdir -p $APP_HOME/logs && chown -R node:node /app
+USER node
+
+# 本番用の最小限のファイルをコピー
+COPY --chown=node:node api/package.json api/pnpm-lock.yaml api/ecosystem.config.cjs ./
+
+# 本番環境に必要なパッケージのみをインストール
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --ignore-scripts --prod --store-dir=/home/node/.local/share/pnpm/store
+
+# builder ステージから「コンパイル後のJavaScript成果物」だけを綺麗にコピー
+COPY --from=builder --chown=node:node /app/api/dist ./dist
+
+EXPOSE 3000
+
+CMD ["node", "dist/index.js"]

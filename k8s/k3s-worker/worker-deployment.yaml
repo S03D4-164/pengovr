@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: pengovr
+  labels:
+    app: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      shareProcessNamespace: true
+      containers:
+        - name: worker
+          image: pengovr-worker:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            # SeaweedFS (Cloud Cluster 内部通信)
+            - name: S3_ENDPOINT
+              value: 'http://seaweedfs:8333'
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: access-key
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: secret-key
+            - name: S3_BUCKET
+              value: 'pengovr-assets'
+            # Redis (Cloud Cluster 内部通信)
+            - name: REDIS_HOST
+              value: 'redis'
+            - name: REDIS_PORT
+              value: '6379'
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pengovr-secrets
+                  key: redis-password
+            - name: NODE_ENV
+              value: 'production'
+            - name: QUEUE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: worker-config
+                  key: queue-name
+            - name: ENRICHMENT_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: worker-config
+                  key: enrichment-queue
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '200m'
+            limits:
+              memory: '2Gi'
+              cpu: '500m'

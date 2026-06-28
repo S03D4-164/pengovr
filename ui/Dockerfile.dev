@@ -1,0 +1,30 @@
+FROM node@sha256:8efd3ed25d83b4328df873ed9853a5bd97ffce8eb3498785e45c3e7297571f0e
+
+ENV APP_HOME=/app/ui
+WORKDIR $APP_HOME
+
+# Install pnpm
+RUN npm install -g pnpm@11.5.2
+
+RUN mkdir -p $APP_HOME && chown -R node:node /app
+
+# 依存関係ファイルのみ先にコピー（レイヤーキャッシュ活用）
+COPY --chown=node:node ui/pnpm-workspace.yaml ./
+COPY --chown=node:node ui/pnpm-lock.yaml ./
+COPY --chown=node:node ui/package.json ./
+COPY --chown=node:node ui/tsconfig.json ./
+COPY --chown=node:node ui/vite.config.ts ./
+COPY --chown=node:node ui/index.html ./
+
+USER node
+
+# 依存関係インストール（ソースコード変更時も再実行されない）
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store
+
+# logsディレクトリを作成（PM2用）
+RUN mkdir -p logs && chmod 777 logs
+
+EXPOSE 3001
+
+CMD ["pnpm", "run", "dev"]
