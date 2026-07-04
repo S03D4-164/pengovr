@@ -36,7 +36,7 @@ const wapalyze = async (url: string, headers: any, html: string) => {
       url,
       headers: parsedHeaders,
       html,
-      scriptSrc: [html],
+      //scriptSrc: [html],
     });
 
     result = WappalyzerCore.resolve(detections);

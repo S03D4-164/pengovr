@@ -1,0 +1,33 @@
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Environment variables and secrets
+.env
+*.local
+k8s/**/*.yaml
+!k8s/**/configmap.yaml.example
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build artifacts and logs
+dist
+**/dist
+build
+**/build
+logs
+**/logs
+*.log
+
+# Cache
+.npm
+.pnpm-store
+.pengovr_cache

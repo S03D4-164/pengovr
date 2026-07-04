@@ -6,17 +6,15 @@
         <select
           v-model="options.userAgent"
           :disabled="userAgentsLoading"
-          class="select select-bordered select-sm w-full font-mono text-sm"
+          class="select select-bordered font-mono w-full"
         >
           <option v-for="ua in userAgents" :key="ua._id" :value="ua.userAgent">
             {{ ua.name }}
           </option>
         </select>
-      </label>
 
-      <label class="inline-label">
         <span class="label-text">Lang</span>
-        <select v-model="options.language" class="select select-bordered select-sm w-full">
+        <select v-model="options.language" class="select select-bordered">
           <option value="ja">ja</option>
           <option value="en">en</option>
           <option value="zh">zh</option>
@@ -28,7 +26,7 @@
         <input
           v-model="options.referrer"
           placeholder="https://..."
-          class="input input-bordered input-sm w-full"
+          class="input input-bordered w-full"
         />
       </label>
 
@@ -37,7 +35,7 @@
         <input
           v-model="options.proxy"
           placeholder="ip:port"
-          class="input input-bordered input-sm w-full"
+          class="input input-bordered w-full"
         />
       </label>
 
@@ -49,11 +47,9 @@
           max="300"
           min="30"
           step="30"
-          class="input input-bordered input-sm w-full"
+          class="input input-bordered"
         />
-      </label>
 
-      <label class="inline-label">
         <span class="label-text">Delay (s)</span>
         <input
           type="number"
@@ -61,20 +57,29 @@
           max="60"
           min="0"
           step="5"
-          class="input input-bordered input-sm w-full"
+          class="input input-bordered"
         />
       </label>
     </div>
 
     <div class="space-y-2">
       <div class="form-control">
-        <label class="label cursor-pointer justify-start gap-3 p-1">
+        <label class="label cursor-pointer justify-start gap-2 p-1">
           <input
             type="checkbox"
             v-model="options.disableScript"
             class="checkbox checkbox-primary checkbox-sm"
           />
-          <span class="label-text font-bold">Disable Script</span>
+          <span class="label-text font-bold mr-3">Disable Script</span>
+        </label>
+
+        <label class="label cursor-pointer justify-start gap-2 p-1">
+          <input
+            type="checkbox"
+            v-model="options.recordHar"
+            class="checkbox checkbox-primary checkbox-sm"
+          />
+          <span class="label-text font-bold mr-3">Save harfile</span>
         </label>
       </div>
 

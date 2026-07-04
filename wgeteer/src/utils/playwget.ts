@@ -41,7 +41,6 @@ async function genPage(
     channel: 'chrome',
     headless: false,
     viewport: null,
-    recordHar: { path: `${userDataDir}/pw.har` },
     ignoreHTTPSErrors: true,
     args: chromiumArgs,
     ignoreDefaultArgs: ['--enable-automation'], // hide infobar
@@ -58,6 +57,10 @@ async function genPage(
   if (webpage.option?.disableScript) {
     options.javaScriptEnabled = false;
   }
+  if (webpage.option?.recordHar) {
+    options.recordHar = { path: `${userDataDir}/pw.har` };
+  }
+
   if (webpage.option?.exHeaders) {
     for (const line of webpage.option.exHeaders.split('\r\n')) {
       const match = line.match(/^([^:]+):(.+)$/);

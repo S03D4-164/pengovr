@@ -39,7 +39,7 @@
                     <template v-for="(value, key) in webpage.option" :key="key">
                       <tr v-if="value" class="border-none">
                         <td
-                          class="py-0.5 px-2 font-bold opacity-50 text-sm w-24 align-top uppercase border-none"
+                          class="py-0.5 px-2 font-bold opacity-50 text-sm w-32 align-top uppercase border-none"
                         >
                           {{ key }}:
                         </td>
@@ -68,7 +68,7 @@
                 class="text-sm break-all"
                 :class="
                   webpage.url && webpage.url !== webpage.input
-                    ? 'text-info font-semibold opacity-100'
+                    ? 'text-warning font-semibold opacity-100'
                     : 'opacity-70'
                 "
                 :title="webpage.url"

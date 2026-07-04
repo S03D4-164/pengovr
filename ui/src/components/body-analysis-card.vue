@@ -272,7 +272,7 @@ pre {
 :deep(.token) {
   background: none !important;
 }
-.btn-outline.btn-active {
+[data-theme='dark'] .btn-outline.btn-active {
   background-color: rgba(255, 255, 255, 0.2) !important;
   border-color: #ffffff !important;
   color: #ffffff !important;

@@ -1,6 +1,6 @@
 <template>
   <div class="modal" :class="{ 'modal-open': visible }">
-    <div class="modal-box max-w-3xl">
+    <div class="modal-box max-w-4xl">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg font-bold">Track Configuration</h3>
         <button @click="close" class="btn btn-sm btn-circle btn-ghost">✕</button>

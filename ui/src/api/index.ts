@@ -169,7 +169,7 @@ export const websiteApi = {
       onlyTracking: onlyTracking.toString(),
     }),
   getWebsite: (id: string) => api.get(`/websites/${id}`),
-  getWebsiteByUrl: (url: string) => api.get(`/websites/by-url/${encodeURIComponent(url)}`),
+  getWebsiteByUrl: (url: string) => api.get(`/websites/by-url/${url}`),
 };
 
 export const screenshotApi = {

@@ -2,8 +2,7 @@ import { Worker, Job } from 'bullmq';
 import config from './config/index.js';
 import Scraper from './scraper.js';
 
-// キュー名の一致を確認 (デフォルトをプロジェクトで使われている 'ppengo' に設定)
-const queueName = process.env.QUEUE_NAME || config.queueName;
+const queueName = config.queueName;
 
 const scraper = new Scraper();
 
@@ -44,7 +43,7 @@ const worker = new Worker(
       port: config.redis.port,
       password: config.redis.password,
     },
-    //concurrency: config.concurrency || 1,
+    concurrency: Number(config.concurrency),
   },
 );
 

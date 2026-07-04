@@ -176,6 +176,14 @@
               placeholder="Filter Body Text..."
               class="input input-bordered input-xs w-48"
             />
+            <label class="label cursor-pointer gap-1 p-0 select-none">
+              <span class="label-text text-xs">Nav Only</span>
+              <input
+                v-model="filterNavigationOnly"
+                type="checkbox"
+                class="checkbox checkbox-primary checkbox-xs"
+              />
+            </label>
 
             <!-- Pagination Controls -->
             <div class="join ml-2" v-if="totalRequestPages > 1">
@@ -205,7 +213,7 @@
             <button
               @click="resetRequestFilters"
               class="btn btn-xs btn-ghost"
-              v-if="filterIp || filterText"
+              v-if="filterIp || filterText || filterNavigationOnly"
             >
               Clear
             </button>
@@ -385,6 +393,7 @@ export default {
       requestLimit: 100,
       filterIp: '',
       filterText: '',
+      filterNavigationOnly: false,
     };
   },
   async created() {
@@ -457,7 +466,7 @@ export default {
     },
     filteredMatchedRequests() {
       const matched = this.matchedRequests;
-      if (!this.filterIp && !this.filterText) return matched;
+      if (!this.filterIp && !this.filterText && !this.filterNavigationOnly) return matched;
 
       const ipLower = this.filterIp.toLowerCase();
       const textLower = this.filterText.toLowerCase();
@@ -470,8 +479,9 @@ export default {
         const matchesIp = !this.filterIp || ip.toLowerCase().includes(ipLower);
         const matchesText =
           !this.filterText || body.toLowerCase().includes(textLower) || url.includes(textLower);
+        const matchesNavigation = !this.filterNavigationOnly || !!item.request?.isNavigationRequest;
 
-        return matchesIp && matchesText;
+        return matchesIp && matchesText && matchesNavigation;
       });
     },
     totalRequestPages() {
@@ -523,6 +533,7 @@ export default {
     resetRequestFilters() {
       this.filterIp = '';
       this.filterText = '';
+      this.filterNavigationOnly = false;
       this.requestPage = 1;
     },
     async fetchWebpage() {
@@ -574,13 +585,13 @@ export default {
     async fetchWebsite() {
       try {
         if (!this.webpage?.input) return;
-
         console.log('Fetching website for URL:', this.webpage.input);
         try {
-          this.website = await websiteApi.getWebsiteByUrl(this.webpage.input);
+          const b64input = btoa(this.webpage.input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          this.website = await websiteApi.getWebsiteByUrl(b64input);
           console.log('Website data received:', this.website);
         } catch (e) {
-          console.log('No website found for this URL or error fetching');
+          console.log('No website found for this URL or error fetching', e);
           this.website = null;
         }
       } catch (error) {

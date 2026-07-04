@@ -116,6 +116,7 @@ class EnrichmentWorker {
           port: config.redis.port,
           password: config.redis.password,
         },
+        lockDuration: 3 * 60 * 1000,
         //concurrency: config.concurrency || 1,
       },
     );

@@ -10,69 +10,7 @@ services:
       - mongo1-data:/data/db
     networks:
       - app-network
-    command: >
-      mongod --replSet rs0 --bind_ip_all
-
-  # MongoDB Replica Set - Secondary
-  mongo2:
-    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
-    container_name: mongo2
-    hostname: mongo2
-    ports:
-      - '127.0.0.1:27018:27017'
-    volumes:
-      - mongo2-data:/data/db
-    networks:
-      - app-network
-    command: >
-      mongod --replSet rs0 --bind_ip_all
-    depends_on:
-      - mongo1
-
-  # MongoDB Replica Set - Arbiter
-  mongo3:
-    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
-    container_name: mongo3
-    hostname: mongo3
-    ports:
-      - '127.0.0.1:27019:27017'
-    volumes:
-      - mongo3-data:/data/db
-    networks:
-      - app-network
-    command: >
-      mongod --replSet rs0 --bind_ip_all
-    depends_on:
-      - mongo2
-
-  # Initialize MongoDB Replica Set
-  mongo-setup:
-    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
-    container_name: mongo-setup
-    networks:
-      - app-network
-    depends_on:
-      - mongo3
-    entrypoint: >
-      bash -c "
-        echo 'Waiting for MongoDB nodes...' &&
-        sleep 5 &&
-        mongosh --host mongo1:27017 --eval '
-          try {
-            rs.status();
-            print(\"Replica set already initialized\");
-          } catch (e) {
-            if (e.codeName === \"NotYetInitialized\") {
-              rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongo1:27017\", priority: 2}, {_id: 1, host: \"mongo2:27017\", priority: 1}, {_id: 2, host: \"mongo3:27017\", arbiterOnly: true}]});
-              print(\"Replica set initialized\");
-            } else {
-              throw e;
-            }
-          }
-        ' &&
-        echo 'Setup complete'
-      "
-    restart: 'no'
+    command: mongod --bind_ip_all
 
   # API Service
   api-dev:
@@ -89,7 +27,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb://mongo1:27017,mongo2:27017/webscraping?replicaSet=rs0
+      - MONGODB_URI=mongodb://127.0.0.1:27017/webscraping
       - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
       - REDIS_PASSWORD=pengovr-password
@@ -105,12 +43,11 @@ services:
     working_dir: /app/api
     command: pnpm exec pm2 start ecosystem.config.cjs --no-daemon
     depends_on:
-      - mongo3
+      - mongo1
     restart: unless-stopped
     network_mode: host
     extra_hosts:
       - 'mongo1:127.0.0.1'
-      - 'mongo2:127.0.0.1'
 
   # UI Service - Development with hot reload
   ui-dev:
@@ -148,7 +85,5 @@ networks:
 
 volumes:
   mongo1-data:
-  mongo2-data:
-  mongo3-data:
   api-node-modules:
   ui-node-modules:

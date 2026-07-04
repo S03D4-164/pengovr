@@ -16,6 +16,14 @@
             </td>
           </tr>
           <tr>
+            <th class="opacity-60">URL</th>
+            <td>
+              <span class="text-base font-semibold break-all">{{
+                displayUrl(website.url)
+              }}</span>
+            </td>
+          </tr>
+          <tr>
             <th class="opacity-60">Raw JSON</th>
             <td>
               <a
@@ -24,14 +32,6 @@
                 class="link link-primary text-sm font-mono"
                 >/api/websites/{{ website._id }}</a
               >
-            </td>
-          </tr>
-          <tr>
-            <th class="opacity-60">URL</th>
-            <td>
-              <span class="text-base font-semibold text-primary break-all">{{
-                displayUrl(website.url)
-              }}</span>
             </td>
           </tr>
           <tr>

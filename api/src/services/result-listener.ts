@@ -367,6 +367,7 @@ export class ResultListener {
                 jobId: `yara-${webpageId}`,
                 attempts: 2,
                 backoff: { type: 'fixed', delay: 0 },
+                ignoreDependencyOnFailure: true,
               },
             },
             {
@@ -377,6 +378,7 @@ export class ResultListener {
                 jobId: `wappalyzer-${webpageId}`,
                 attempts: 2,
                 backoff: { type: 'fixed', delay: 0 }, // 自分のCPU処理なので待つ必要がない
+                ignoreDependencyOnFailure: true,
               },
             },
             {
@@ -387,6 +389,7 @@ export class ResultListener {
                 jobId: `dns-${webpageId}`,
                 attempts: 3,
                 backoff: { type: 'exponential', delay: 1000 },
+                ignoreDependencyOnFailure: true,
               },
             },
           ],

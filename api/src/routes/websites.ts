@@ -228,7 +228,7 @@ router.post('/', async (req, res) => {
 router.get('/by-url/:url', async (req, res) => {
   try {
     const timestamp = new Date().toISOString();
-    const url = decodeURIComponent(req.params.url);
+    const url = Buffer.from(req.params.url, 'base64').toString('utf-8');
     console.log(`[${timestamp}] WEBSITE_BY_URL_REQUEST - URL: "${url}"`);
 
     const website = await WebsiteModel.findOne({ url }).populate('last');
