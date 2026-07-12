@@ -384,11 +384,13 @@ class EnrichmentWorker {
         }
       }
 
-      // 各タスクの結果を個別に保存
-      const enrichmentResultKey = `results/${actualJobId}.json`;
-      const resultData = { webpage, responses };
-      await this.uploadToS3(enrichmentResultKey, JSON.stringify(resultData), 'application/json');
-      console.log(`Results for ${jobName} uploaded to: ${enrichmentResultKey}`);
+      // 各タスクの結果を個別に保存 (finalizer ジョブ自体は結果データのアップロード不要)
+      if (jobName !== 'enrichment_finalizer') {
+        const enrichmentResultKey = `results/${actualJobId}.json`;
+        const resultData = { webpage, responses };
+        await this.uploadToS3(enrichmentResultKey, JSON.stringify(resultData), 'application/json');
+        console.log(`Results for ${jobName} uploaded to: ${enrichmentResultKey}`);
+      }
 
       console.log(`Job ${actualJobId} completed successfully`);
     } catch (error) {

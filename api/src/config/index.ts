@@ -46,10 +46,11 @@ const config = {
   enrichmentQueue: process.env.ENRICHMENT_QUEUE || 'enrichment-tasks',
   isProduction: process.env.NODE_ENV === 'production',
   s3: {
-    endpoint: process.env.S3_ENDPOINT || 'http://127.0.0.1:8333',
+    endpoint: process.env.S3_ENDPOINT,
     accessKey: process.env.S3_ACCESS_KEY || 'pengovr-admin',
     secretKey: process.env.S3_SECRET_KEY || 'pengovr-password',
     bucket: process.env.S3_BUCKET || 'pengovr-assets',
+    region: process.env.S3_REGION || 'us-east-1',
   },
 };
 

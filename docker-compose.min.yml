@@ -30,12 +30,13 @@ services:
       - MONGODB_URI=mongodb://127.0.0.1:27017/webscraping
       - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=pengovr-password
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      #- S3_ENDPOINT=http://127.0.0.1:8333
+      - S3_ENDPOINT=
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
       - QUEUE_NAME=scraping-tasks
-      - S3_ENDPOINT=http://127.0.0.1:8333
-      - S3_ACCESS_KEY=pengovr-admin
-      - S3_SECRET_KEY=pengovr-password
-      - S3_BUCKET=pengovr-assets
       - CI=true
     volumes:
       - ./api/:/app/api

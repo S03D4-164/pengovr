@@ -8,36 +8,59 @@ import config from '../config/index.js';
 import { gzipSync } from 'zlib';
 
 const s3Client = new S3Client({
-  endpoint: config.s3.endpoint,
+  region: config.s3.region || 'us-east-1', // Placeholder region for S3 client compatibility
   credentials: {
     accessKeyId: config.s3.accessKey,
     secretAccessKey: config.s3.secretKey,
   },
-  forcePathStyle: true, // Required for MinIO
-  region: 'us-east-1', // Placeholder region
+  ...(config.s3.endpoint
+    ? {
+        endpoint: config.s3.endpoint,
+        forcePathStyle: true,
+      }
+    : {}),
 });
 
 // Ensure bucket exists on start (useful for local MinIO testing)
 let bucketChecked = false;
-async function ensureBucketExists(): Promise<void> {
+export async function ensureBucketExists(): Promise<void> {
   if (bucketChecked) return;
   try {
-    await s3Client.send(new HeadBucketCommand({ Bucket: config.s3.bucket }));
+    await s3Client.send(
+      new HeadBucketCommand({ Bucket: config.s3.bucket }),
+    );
     bucketChecked = true;
   } catch (error: any) {
-    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
-      console.log(`Bucket ${config.s3.bucket} not found. Creating it...`);
+    if (
+      error.name === 'NotFound' ||
+      error.$metadata?.httpStatusCode === 404
+    ) {
+      console.log(
+        `Bucket ${config.s3.bucket} not found. Creating it...`,
+      );
       try {
         await s3Client.send(
-          new CreateBucketCommand({ Bucket: config.s3.bucket }),
+          new CreateBucketCommand({
+            Bucket: config.s3.bucket,
+          }),
         );
         bucketChecked = true;
-        console.log(`Bucket ${config.s3.bucket} successfully created.`);
-      } catch (createErr) {
-        console.error('Failed to create bucket:', createErr);
+        console.log(
+          `Bucket ${config.s3.bucket} successfully created.`,
+        );
+      } catch (createErr: any) {
+        console.error(
+          'Failed to create bucket:',
+          createErr,
+        );
+        throw createErr;
       }
     } else {
-      console.error('Failed to check bucket existence:', error);
+      console.error(
+        'Failed to check bucket existence:',
+        error,
+      );
+      throw error;
     }
   }
 }
@@ -66,9 +89,13 @@ export async function uploadString(
 /**
  * Uploads a string content as Gzipped JSON to MinIO/S3
  */
-export async function uploadJSONGzip(key: string, body: any): Promise<string> {
+export async function uploadJSONGzip(
+  key: string,
+  body: any,
+): Promise<string> {
   await ensureBucketExists();
-  const jsonString = typeof body === 'string' ? body : JSON.stringify(body);
+  const jsonString =
+    typeof body === 'string' ? body : JSON.stringify(body);
   const compressedBody = gzipSync(Buffer.from(jsonString));
 
   const command = new PutObjectCommand({

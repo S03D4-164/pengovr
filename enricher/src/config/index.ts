@@ -13,7 +13,7 @@ const config = {
   scheduleInterval: parseInt(process.env.SCHEDULE_INTERVAL || '3600000', 10), // 1 hour in milliseconds
   usePlaywget: process.env.USE_PLAYWGET !== 'false',
   s3: {
-    endpoint: process.env.S3_ENDPOINT || 'http://localhost:8333',
+    endpoint: process.env.S3_ENDPOINT,
     accessKey: process.env.S3_ACCESS_KEY || 'pengovr-admin',
     secretKey: process.env.S3_SECRET_KEY || 'pengovr-password',
     bucket: process.env.S3_BUCKET || 'pengovr-assets',

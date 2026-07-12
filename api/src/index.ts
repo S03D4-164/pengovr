@@ -24,6 +24,7 @@ import ResultListener from './services/result-listener';
 import { initResultListeners } from './services/resultProcessor';
 import { initTrackScheduler } from './services/track-scheduler';
 import { logError, shouldLog } from './utils/logger';
+import { initializeAndEmptyBucket } from './utils/s3';
 
 const app: express.Application = express();
 
@@ -45,12 +46,12 @@ app.use(
 // MongoDB Connection - MUST wait for connection before starting server
 const mongooseOptions = {
   serverSelectionTimeoutMS: 5000, // DB接続不可時に素早くエラーを返してUIを更新するため短縮 (旧: 30s)
-  socketTimeoutMS: 30000,         // 検索などの重いクエリの実行時間を考慮し、ソケットタイムアウトは30秒を維持
-  bufferCommands: true,           // 初期接続完了前にクエリが呼ばれた際のクラッシュを防ぐため有効化 (タイムアウトは bufferTimeoutMS で制御)
+  socketTimeoutMS: 30000, // 検索などの重いクエリの実行時間を考慮し、ソケットタイムアウトは30秒を維持
+  bufferCommands: true, // 初期接続完了前にクエリが呼ばれた際のクラッシュを防ぐため有効化 (タイムアウトは bufferTimeoutMS で制御)
   maxPoolSize: 10,
   minPoolSize: 2,
   maxIdleTimeMS: 30000,
-  waitQueueTimeoutMS: 5000,       // コネクションの空き待ちタイムアウトも5秒に短縮 (旧: 30s)
+  waitQueueTimeoutMS: 5000, // コネクションの空き待ちタイムアウトも5秒に短縮 (旧: 30s)
   readPreference: 'primaryPreferred' as const,
 };
 
@@ -65,6 +66,11 @@ async function startServer() {
     console.log('Connecting to MongoDB...');
     await mongoose.connect(config.mongoUri, mongooseOptions);
     console.log('MongoDB connection established');
+
+    // S3接続確認と初期化（バケットを空にする）
+    console.log('Initializing S3 connection and emptying bucket...');
+    await initializeAndEmptyBucket();
+    console.log('S3 initialization completed successfully');
 
     // Wait for 'open' event to ensure connection is fully ready
     if (mongoose.connection.readyState !== 1) {
@@ -93,7 +99,7 @@ async function startServer() {
       console.log(`API server running on port ${PORT}`);
     });
   } catch (err) {
-    console.error('MongoDB connection failed:', err);
+    console.error('Server connection failed:', err);
     process.exit(1);
   }
 }

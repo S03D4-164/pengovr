@@ -30,18 +30,15 @@ services:
       - NODE_ENV=development
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=pengovr-password
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - QUEUE_NAME=scraping-tasks
       - ENRICHMENT_QUEUE=enrichment-tasks
-      - S3_ENDPOINT=http://seaweedfs:8333
-      - S3_ACCESS_KEY=pengovr-admin
-      - S3_SECRET_KEY=pengovr-password
-      - S3_BUCKET=pengovr-assets
+      #- S3_ENDPOINT=http://seaweedfs:8333
+      - S3_ENDPOINT=
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
       - CONCURRENCY=3
-      # load from .env
-      - VTKEY
-      - GSBKEY
-      - PPENGO
       #- X11VNC_PASSWORD="password"
       - ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
       - CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
@@ -64,7 +61,7 @@ services:
     restart: unless-stopped
     depends_on:
       - redis
-      - seaweedfs
+      #- seaweedfs
 
   # Enrichment Worker Service
   enricher-dev:
@@ -79,19 +76,18 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=pengovr-password
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - GOSB_HOST=gosb
       - GOSB_PORT=3002
-      - S3_ENDPOINT=http://seaweedfs:8333
-      - S3_ACCESS_KEY=pengovr-admin
-      - S3_SECRET_KEY=pengovr-password
-      - S3_BUCKET=pengovr-assets
+      #- S3_ENDPOINT=http://seaweedfs:8333
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
       - ENRICHMENT_QUEUE=enrichment-tasks
       # load from .env
-      - VTKEY
-      - GSBKEY
-      - GEMINI_API_KEY
-      - PPENGO
+      - VTKEY=${VTKEY}
+      - GSBKEY=${GSBKEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     tty: true
     init: true
     volumes:
@@ -110,7 +106,7 @@ services:
       - app-network
     depends_on:
       - redis
-      - seaweedfs
+      #- seaweedfs
 
   gosb:
     build: 'gosb'

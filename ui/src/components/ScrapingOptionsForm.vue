@@ -32,11 +32,7 @@
 
       <label class="inline-label">
         <span class="label-text">Proxy</span>
-        <input
-          v-model="options.proxy"
-          placeholder="ip:port"
-          class="input input-bordered w-full"
-        />
+        <input v-model="options.proxy" placeholder="ip:port" class="input input-bordered w-full" />
       </label>
 
       <label class="inline-label">
@@ -80,6 +76,15 @@
             class="checkbox checkbox-primary checkbox-sm"
           />
           <span class="label-text font-bold mr-3">Save harfile</span>
+        </label>
+
+        <label class="label cursor-pointer justify-start gap-2 p-1">
+          <input
+            type="checkbox"
+            v-model="options.scrot"
+            class="checkbox checkbox-primary checkbox-sm"
+          />
+          <span class="label-text font-bold mr-3">Xvfb Screenshot</span>
         </label>
       </div>
 
