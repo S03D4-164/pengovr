@@ -3,7 +3,8 @@ import Redis from 'ioredis';
 import crypto from 'crypto';
 import config from '../config';
 import zlib from 'zlib';
-import { downloadBuffer } from '../utils/s3';
+import s3Client, { downloadBuffer } from '../utils/s3';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import Task from '../models/tasks';
 import WebpageModel from '../models/webpage';
 import WebsiteModel from '../models/website';
@@ -38,17 +39,25 @@ export class ResultListener {
   }
 
   public listen(): void {
-    console.log(`Starting BullMQ result listener for queue: ${config.queueName}...`);
+    console.log(
+      `Starting BullMQ result listener for queue: ${config.queueName}...`,
+    );
 
     this.queueEvents.on('completed', async ({ jobId, returnvalue }) => {
       const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] Job ${jobId} completed. Processing scraped results...`);
+      console.log(
+        `[${timestamp}] Job ${jobId} completed. Processing scraped results...`,
+      );
 
       try {
-        const resultMeta = typeof returnvalue === 'string' ? JSON.parse(returnvalue) : returnvalue;
+        const resultMeta =
+          typeof returnvalue === 'string'
+            ? JSON.parse(returnvalue)
+            : returnvalue;
         const { resultKey, error } = resultMeta;
         let { webpageId } = resultMeta;
 
+        /*
         const task = await Task.findOne({ id: jobId });
         if (!task) {
           console.error(`Task ${jobId} not found in database`);
@@ -56,10 +65,10 @@ export class ResultListener {
         }
 
         // Ensure we update the existing webpage document created by the Task route to avoid duplicates
-        if (task.webpageId) {
-          webpageId = task.webpageId.toString();
+        if (webpageId) {
+          webpageId = webpageId.toString();
         }
-
+        */
         if (error) {
           throw new Error(error);
         }
@@ -80,6 +89,11 @@ export class ResultListener {
         const scrapingResult = JSON.parse(resultDecompressed.toString());
         const { webpage, website } = scrapingResult;
 
+        console.log(
+          `[ResultListener] Downloaded webpage.option:`,
+          JSON.stringify(webpage.option),
+        );
+
         const requests = webpage.requests || [];
         const responses = webpage.responses || [];
         const payloads = webpage.payloads_data || [];
@@ -94,7 +108,9 @@ export class ResultListener {
         const screenshotKeyMap = new Map<string, any>();
 
         if (payloads.length > 0) {
-          console.log(`Processing ${payloads.length} payloads from S3 to MongoDB...`);
+          console.log(
+            `Processing ${payloads.length} payloads from S3 to MongoDB...`,
+          );
           for (const p of payloads) {
             const { _id: workerId, ...payloadData } = p;
 
@@ -141,7 +157,8 @@ export class ResultListener {
               if (s.s3Key) {
                 screenshotKeyMap.set(s.s3Key, savedScreenshot._id);
                 const fileName = s.s3Key.split('/').pop();
-                if (fileName) screenshotKeyMap.set(fileName, savedScreenshot._id);
+                if (fileName)
+                  screenshotKeyMap.set(fileName, savedScreenshot._id);
               }
             }
           }
@@ -190,30 +207,48 @@ export class ResultListener {
         webpageData.responses = responses.map((res: any) => res._id);
 
         // Handle harfile: if it's a string (S3 key), download it and create a Harfile document
-        if (webpageData.harfile && !mongoose.Types.ObjectId.isValid(webpageData.harfile)) {
-          console.log(`Queueing enrichment task for HAR file: ${webpageData.harfile}`);
-          const harTaskId = `har-${jobId}`;
-          await this.enrichmentQueue.add(
-            'process_har',
-            {
-              id: harTaskId,
-              type: 'process_har',
-              webpageId,
-              s3Key: webpageData.harfile,
-              timestamp: new Date().toISOString(),
-            },
-            { jobId: harTaskId },
-          );
-          // Remove the S3 key string from the data so it doesn't cause a CastError
-          // when updating MongoDB (expects an ObjectId).
-          // The harfile reference will be updated once the enrichment task completes.
-          delete webpageData.harfile;
+        if (
+          webpageData.harfile &&
+          !mongoose.Types.ObjectId.isValid(webpageData.harfile)
+        ) {
+          if (webpageData.option?.noenrich) {
+            console.log(
+              `[ResultListener] Skipping HAR file processing as noenrich option is enabled.`,
+            );
+            delete webpageData.harfile;
+          } else {
+            console.log(
+              `Queueing enrichment task for HAR file: ${webpageData.harfile}`,
+            );
+            const harTaskId = `har-${jobId}`;
+            await this.enrichmentQueue.add(
+              'process_har',
+              {
+                id: harTaskId,
+                type: 'process_har',
+                webpageId,
+                s3Key: webpageData.harfile,
+                timestamp: new Date().toISOString(),
+              },
+              { jobId: harTaskId },
+            );
+            // Remove the S3 key string from the data so it doesn't cause a CastError
+            // when updating MongoDB (expects an ObjectId).
+            // The harfile reference will be updated once the enrichment task completes.
+            delete webpageData.harfile;
+          }
         }
 
         // Update screenshot references
-        if (webpageData.screenshot && screenshotIdMap.has(webpageData.screenshot)) {
+        if (
+          webpageData.screenshot &&
+          screenshotIdMap.has(webpageData.screenshot)
+        ) {
           webpageData.screenshot = screenshotIdMap.get(webpageData.screenshot);
-        } else if (webpageData.screenshot && screenshotKeyMap.has(webpageData.screenshot)) {
+        } else if (
+          webpageData.screenshot &&
+          screenshotKeyMap.has(webpageData.screenshot)
+        ) {
           webpageData.screenshot = screenshotKeyMap.get(webpageData.screenshot);
         } else if (
           webpageData.screenshot &&
@@ -254,7 +289,10 @@ export class ResultListener {
               // Try manual fallback for gallery items too
               try {
                 const buffer = await downloadBuffer(s.full);
-                const md5 = crypto.createHash('md5').update(buffer).digest('hex');
+                const md5 = crypto
+                  .createHash('md5')
+                  .update(buffer)
+                  .digest('hex');
                 const savedScreenshot = await ScreenshotModel.findOneAndUpdate(
                   { md5 },
                   { md5, screenshot: buffer.toString('base64') },
@@ -262,7 +300,9 @@ export class ResultListener {
                 );
                 if (savedScreenshot) s.full = savedScreenshot._id;
               } catch (e: any) {
-                console.warn(`[ResultListener] Gallery mapping failed for key: ${s.full}`);
+                console.warn(
+                  `[ResultListener] Gallery mapping failed for key: ${s.full}`,
+                );
                 s.full = null;
               }
             }
@@ -274,7 +314,9 @@ export class ResultListener {
           webpageData.payload = payloadIdMap.get(webpageData.payload);
         }
         if (Array.isArray(webpageData.payloads)) {
-          webpageData.payloads = webpageData.payloads.map((id: any) => payloadIdMap.get(id) || id);
+          webpageData.payloads = webpageData.payloads.map(
+            (id: any) => payloadIdMap.get(id) || id,
+          );
         }
 
         delete webpageData.payloads_data;
@@ -295,15 +337,8 @@ export class ResultListener {
           `[ResultListener] MongoDB: Webpage ${webpageId} successfully updated with scraped data.`,
         );
 
-        // 4. Create Screenshot document if screenshotBuffer is present
-        let screenshotId = null;
-        if (screenshotBuffer) {
-          // screenshotBuffer could be a base64 string or we fetch from separate key if needed
-          // Assuming screenshot data is saved as binary/Buffer in MongoDB Result model or Screenshot model
-        }
-
-        // 6. Update Website last crawled relation
-        let websiteDoc = await WebsiteModel.findOne({ url: task.url });
+        // Update Website last crawled relation
+        let websiteDoc = await WebsiteModel.findOne({ url: webpage.input });
         if (websiteDoc) {
           websiteDoc.last = webpageId;
 
@@ -319,106 +354,120 @@ export class ResultListener {
           console.log(
             `[ResultListener] MongoDB: Updated existing Website ${websiteDoc._id} last reference to Webpage ${webpageId}`,
           );
-        } else if (website) {
-          const newWebsite = new WebsiteModel(website);
-          newWebsite.last = webpageId;
-
-          // Also decrement if this is the first time the website is being saved with tracking enabled
-          if (newWebsite.track && newWebsite.track.counter > 0) {
-            newWebsite.track.counter -= 1;
-          }
-
-          await newWebsite.save();
-          console.log(
-            `[ResultListener] MongoDB: Created new Website ${newWebsite._id} and linked to Webpage ${webpageId}`,
-          );
         }
 
-        // 7. Update Task status
-        task.status = 'completed';
-        task.webpageId = webpageId;
-        await task.save();
-        console.log(`[ResultListener] MongoDB: Task ${jobId} status updated to "completed"`);
+        console.log(
+          `[ResultListener] MongoDB: Task ${jobId} status updated to "completed"`,
+        );
 
         // 8. Queue specialized enrichment tasks (Split into parallel jobs)
         console.log(
-          `[ResultListener] Queueing specialized enrichment tasks (yara, wappalyzer, dns) for Webpage ${webpageId}...`,
+          `[ResultListener] DEBUG: webpageData.option =`,
+          JSON.stringify(webpageData.option),
         );
-        const yaraRules = await YaraModel.find({ valid: true }).lean();
-        const baseTaskData = {
-          webpageId,
-          resultKey, // 全ての子タスクが元のスクレイピング結果を参照できるようにする
-          url: webpage.url || webpage.input,
-          timestamp: new Date().toISOString(),
-        };
+        if (webpageData.option?.noenrich) {
+          console.log(
+            `[ResultListener] Skipping specialized enrichment tasks (yara, wappalyzer, dns) for Webpage ${webpageId} as noenrich option is enabled.`,
+          );
+          if (resultKey) {
+            console.log(`[ResultListener] Cleaning up source: ${resultKey}`);
+            await s3Client
+              .send(
+                new DeleteObjectCommand({
+                  Bucket: config.s3.bucket,
+                  Key: resultKey,
+                }),
+              )
+              .catch((err) =>
+                console.warn(`[ResultListener] Cleanup failed: ${err.message}`),
+              );
+          }
+        } else {
+          console.log(
+            `[ResultListener] Queueing specialized enrichment tasks (yara, wappalyzer, dns) for Webpage ${webpageId}...`,
+          );
+          const yaraRules = await YaraModel.find({ valid: true }).lean();
+          const baseTaskData = {
+            webpageId,
+            resultKey, // 全ての子タスクが元のスクレイピング結果を参照できるようにする
+            url: webpage.url || webpage.input,
+            timestamp: new Date().toISOString(),
+          };
 
-        // Flow (依存関係) の作成
-        await this.flowProducer.add({
-          name: 'enrichment_finalizer',
-          queueName: config.enrichmentQueue,
-          data: { webpageId, resultKey },
-          opts: { jobId: `finalizer-${webpageId}` },
-          children: [
-            {
-              name: 'yara',
-              data: { ...baseTaskData, content: webpage.content, yaraRules },
-              queueName: config.enrichmentQueue,
-              opts: {
-                jobId: `yara-${webpageId}`,
-                attempts: 2,
-                backoff: { type: 'fixed', delay: 0 },
-                ignoreDependencyOnFailure: true,
+          // Flow (依存関係) の作成
+          await this.flowProducer.add({
+            name: 'enrichment_finalizer',
+            queueName: config.enrichmentQueue,
+            data: { webpageId, resultKey },
+            opts: { jobId: `finalizer-${webpageId}` },
+            children: [
+              {
+                name: 'yara',
+                data: { ...baseTaskData, content: webpage.content, yaraRules },
+                queueName: config.enrichmentQueue,
+                opts: {
+                  jobId: `yara-${webpageId}`,
+                  attempts: 2,
+                  backoff: { type: 'fixed', delay: 0 },
+                  ignoreDependencyOnFailure: true,
+                },
               },
-            },
-            {
-              name: 'wappalyzer',
-              data: { ...baseTaskData, content: webpage.content },
-              queueName: config.enrichmentQueue,
-              opts: {
-                jobId: `wappalyzer-${webpageId}`,
-                attempts: 2,
-                backoff: { type: 'fixed', delay: 0 }, // 自分のCPU処理なので待つ必要がない
-                ignoreDependencyOnFailure: true,
+              {
+                name: 'wappalyzer',
+                data: { ...baseTaskData, content: webpage.content },
+                queueName: config.enrichmentQueue,
+                opts: {
+                  jobId: `wappalyzer-${webpageId}`,
+                  attempts: 2,
+                  backoff: { type: 'fixed', delay: 0 }, // 自分のCPU処理なので待つ必要がない
+                  ignoreDependencyOnFailure: true,
+                },
               },
-            },
-            {
-              name: 'dns',
-              data: { ...baseTaskData, remoteAddress: webpage.remoteAddress },
-              queueName: config.enrichmentQueue,
-              opts: {
-                jobId: `dns-${webpageId}`,
-                attempts: 3,
-                backoff: { type: 'exponential', delay: 1000 },
-                ignoreDependencyOnFailure: true,
+              {
+                name: 'dns',
+                data: { ...baseTaskData, remoteAddress: webpage.remoteAddress },
+                queueName: config.enrichmentQueue,
+                opts: {
+                  jobId: `dns-${webpageId}`,
+                  attempts: 3,
+                  backoff: { type: 'exponential', delay: 1000 },
+                  ignoreDependencyOnFailure: true,
+                },
               },
-            },
-          ],
-        });
+            ],
+          });
+        }
 
         console.log(
           `[${timestamp}] Successfully persisted task ${jobId} results and updated status to completed.`,
         );
       } catch (err: any) {
         console.error(`Failed to process results for job ${jobId}:`, err);
+        /*
         const task = await Task.findOne({ id: jobId });
         if (task) {
           task.status = 'failed';
           task.error = err.message;
           await task.save();
         }
+        */
       }
     });
 
     this.queueEvents.on('failed', async ({ jobId, failedReason }) => {
       const timestamp = new Date().toISOString();
-      console.error(`[${timestamp}] Job ${jobId} failed in queue. Reason: ${failedReason}`);
+      console.error(
+        `[${timestamp}] Job ${jobId} failed in queue. Reason: ${failedReason}`,
+      );
 
+      /*
       const task = await Task.findOne({ id: jobId });
       if (task) {
         task.status = 'failed';
         task.error = failedReason;
         await task.save();
       }
+        */
     });
   }
 }

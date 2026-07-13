@@ -1,7 +1,4 @@
-import type {
-  Task,
-  TaskDetailResponse,
-} from '../types';
+import type { Task, TaskDetailResponse } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -12,7 +9,10 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
     const config: RequestInit = {
@@ -40,7 +40,9 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const url = params ? `${endpoint}?${new URLSearchParams(params)}` : endpoint;
+    const url = params
+      ? `${endpoint}?${new URLSearchParams(params)}`
+      : endpoint;
     return this.request<T>(url);
   }
 
@@ -75,29 +77,18 @@ class ApiClient {
 const api = new ApiClient(API_BASE_URL);
 
 export const taskApi = {
-  createTask: (
-    url: string,
-    options?: {
-      userAgent?: string;
-      referrer?: string;
-      language?: string;
-      disableScript?: boolean;
-      proxy?: string;
-      actions?: string;
-      timeout?: number;
-      delay?: number;
-      pptr?: string;
-      cloudflare?: boolean;
-      extraHeaders?: string;
-      track?: string;
-    },
-  ) =>
-    api.post<{ message: string; taskId: string; webpageId: string; task: Task }>('/tasks', {
+  createTask: (url: string, options?: any) =>
+    api.post<{
+      message: string;
+      //taskId: string;
+      webpageId: string;
+      //task: Task;
+    }>('/tasks', {
       url,
       options,
     }),
-  getTasks: () => api.get<{ results: Task[] }>('/tasks'),
-  getTask: (id: string) => api.get<TaskDetailResponse>(`/tasks/${id}`),
+  //getTasks: () => api.get<{ results: Task[] }>('/tasks'),
+  //getTask: (id: string) => api.get<TaskDetailResponse>(`/tasks/${id}`),
 };
 
 export const responseApi = {
@@ -125,7 +116,8 @@ export const responseApi = {
     }),
   getResponse: (id: string) => api.get<any>(`/responses/${id}`),
   deleteResponse: (id: string) => api.delete(`/responses/${id}`),
-  getScreenshotUrl: (id: string) => `${API_BASE_URL}/responses/${id}/screenshot`,
+  getScreenshotUrl: (id: string) =>
+    `${API_BASE_URL}/responses/${id}/screenshot`,
 };
 
 export const payloadApi = {
@@ -139,7 +131,13 @@ export const payloadApi = {
 };
 
 export const webpageApi = {
-  getWebpages: (page = 1, limit = 10, search = '', startDate = '', endDate = '') =>
+  getWebpages: (
+    page = 1,
+    limit = 10,
+    search = '',
+    startDate = '',
+    endDate = '',
+  ) =>
     api.get('/webpages', {
       page: page.toString(),
       limit: limit.toString(),
@@ -173,7 +171,13 @@ export const websiteApi = {
 };
 
 export const screenshotApi = {
-  getScreenshots: (page = 1, limit = 10, search = '', startDate = '', endDate = '') =>
+  getScreenshots: (
+    page = 1,
+    limit = 10,
+    search = '',
+    startDate = '',
+    endDate = '',
+  ) =>
     api.get<any>('/screenshots', {
       page: (page || 1).toString(),
       limit: (limit || 10).toString(),
@@ -186,21 +190,34 @@ export const screenshotApi = {
 
 export const yaraApi = {
   getYaraRules: (page?: number, limit?: number, search?: string) =>
-    api.get<{ results: any[]; total: number; page: number; limit: number; totalPages: number }>(
-      '/yaras',
-      {
-        page: (page || 1).toString(),
-        limit: (limit || 10).toString(),
-        search: search || '',
-      },
-    ),
+    api.get<{
+      results: any[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>('/yaras', {
+      page: (page || 1).toString(),
+      limit: (limit || 10).toString(),
+      search: search || '',
+    }),
   getYaraRule: (id: string) => api.get(`/yaras/${id}`),
-  createYaraRule: (name: string, rule: string, actions?: string, valid?: boolean) =>
-    api.post('/yaras', { name, rule, actions, valid }),
-  updateYaraRule: (id: string, name: string, rule: string, actions?: string, valid?: boolean) =>
-    api.put(`/yaras/${id}`, { name, rule, actions, valid }),
+  createYaraRule: (
+    name: string,
+    rule: string,
+    actions?: string,
+    valid?: boolean,
+  ) => api.post('/yaras', { name, rule, actions, valid }),
+  updateYaraRule: (
+    id: string,
+    name: string,
+    rule: string,
+    actions?: string,
+    valid?: boolean,
+  ) => api.put(`/yaras/${id}`, { name, rule, actions, valid }),
   deleteYaraRule: (id: string) => api.delete(`/yaras/${id}`),
-  scan: (content: string) => api.post<{ results: any[] }>('/yaras/scan', { content }),
+  scan: (content: string) =>
+    api.post<{ results: any[] }>('/yaras/scan', { content }),
 };
 
 export const healthApi = {
@@ -209,24 +226,35 @@ export const healthApi = {
 
 export const geminiApi = {
   explain: (webpageId: string, content: string) =>
-    api.post<{ message: string; taskId: string }>('/gemini/explain', { webpageId, content }),
+    api.post<{ message: string; taskId: string }>('/gemini/explain', {
+      webpageId,
+      content,
+    }),
   explainContent: (content: string) =>
-    api.post<{ message: string; taskId: string }>('/gemini/explain-content', { content }),
+    api.post<{ message: string; taskId: string }>('/gemini/explain-content', {
+      content,
+    }),
   getResult: (taskId: string) =>
-    api.get<{ status: string; explanation?: string; error?: string; message?: string }>(
-      `/gemini/result/${taskId}`,
-    ),
+    api.get<{
+      status: string;
+      explanation?: string;
+      error?: string;
+      message?: string;
+    }>(`/gemini/result/${taskId}`),
 };
 
 export const userAgentApi = {
   getUserAgents: (page?: number, limit?: number) =>
-    api.get<{ results: any[]; total: number; page: number; limit: number; totalPages: number }>(
-      '/user-agents',
-      {
-        page: (page || 1).toString(),
-        limit: (limit || 10).toString(),
-      },
-    ),
+    api.get<{
+      results: any[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>('/user-agents', {
+      page: (page || 1).toString(),
+      limit: (limit || 10).toString(),
+    }),
   getAllUserAgents: () => api.get<{ results: any[] }>('/user-agents/all'),
   getUserAgent: (id: string) => api.get(`/user-agents/${id}`),
   createUserAgent: (name: string, userAgent: string) =>

@@ -7,7 +7,6 @@ import WebpageModel from '../models/webpage';
 import Task from '../models/tasks';
 import { logError, shouldLog } from '../utils/logger';
 
-
 /**
  * Initializes a BullMQ Repeatable Job to check for websites that need automated tracking.
  */
@@ -54,11 +53,17 @@ export const initTrackScheduler = async (
       for (const site of websites) {
         // Skip if there's already an active (pending/processing) task for this site
         const lastStatus = (site.last as any)?.status;
-        if (lastStatus === 'pending' || lastStatus === 'processing' || lastStatus === 0) {
+        if (
+          lastStatus === 'pending' ||
+          lastStatus === 'processing' ||
+          lastStatus === 0
+        ) {
           continue;
         }
 
-        const lastScrapeTime = site.last ? new Date((site.last as any).createdAt).getTime() : 0;
+        const lastScrapeTime = site.last
+          ? new Date((site.last as any).createdAt).getTime()
+          : 0;
         // periodを時間(hours)として扱い、ミリ秒に変換 (hours * 3600 * 1000)
         const periodInMs = (site.track.period || 1) * 3600 * 1000;
 
@@ -118,5 +123,4 @@ export const initTrackScheduler = async (
       logError('Track Scheduler Worker Error', err);
     }
   });
-
 };

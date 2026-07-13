@@ -5,19 +5,52 @@
     >
       <nav class="flex items-center gap-4 flex-wrap justify-center">
         <ul class="menu menu-horizontal bg-base-200 rounded-box p-1 gap-1">
-          <li><RouterLink to="/websites" active-class="active">Websites</RouterLink></li>
-          <li><RouterLink to="/webpages" active-class="active">Webpages</RouterLink></li>
-          <li><RouterLink to="/responses" active-class="active">Responses</RouterLink></li>
-          <li><RouterLink to="/screenshots" active-class="active">Screenshots</RouterLink></li>
-          <li><RouterLink to="/payloads" active-class="active">Payloads</RouterLink></li>
-          <li><RouterLink to="/yara-rules" active-class="active">YARA</RouterLink></li>
-          <li><RouterLink to="/user-agents" active-class="active">UA</RouterLink></li>
-          <li><RouterLink to="/deobfuscator" active-class="active">Deobfuscator</RouterLink></li>
           <li>
-            <a href="/admin/queues" target="_blank" rel="noopener noreferrer">Queues</a>
+            <RouterLink to="/websites" active-class="active"
+              >Websites</RouterLink
+            >
+          </li>
+          <li>
+            <RouterLink to="/webpages" active-class="active"
+              >Webpages</RouterLink
+            >
+          </li>
+          <li>
+            <RouterLink to="/responses" active-class="active"
+              >Responses</RouterLink
+            >
+          </li>
+          <li>
+            <RouterLink to="/screenshots" active-class="active"
+              >Screenshots</RouterLink
+            >
+          </li>
+          <li>
+            <RouterLink to="/payloads" active-class="active"
+              >Payloads</RouterLink
+            >
+          </li>
+          <li>
+            <RouterLink to="/yara-rules" active-class="active">YARA</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/user-agents" active-class="active">UA</RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/deobfuscator" active-class="active"
+              >Deobfuscator</RouterLink
+            >
+          </li>
+          <li>
+            <a href="/admin/queues" target="_blank" rel="noopener noreferrer"
+              >Queues</a
+            >
           </li>
         </ul>
-        <button class="btn btn-outline btn-success btn-sm" @click.prevent="openUrlModal">
+        <button
+          class="btn btn-outline btn-success btn-sm"
+          @click.prevent="openUrlModal"
+        >
           Add URLs
         </button>
         <label class="swap swap-rotate btn btn-sm btn-ghost btn-circle">
@@ -53,7 +86,9 @@
       </nav>
     </header>
 
-    <main class="flex-1 w-full max-w-[1280px] mx-auto p-4 sm:p-6 lg:p-8 layout-container">
+    <main
+      class="flex-1 w-full max-w-[1280px] mx-auto p-4 sm:p-6 lg:p-8 layout-container"
+    >
       <RouterView />
     </main>
 
@@ -120,7 +155,11 @@ const openUrlModal = () => {
   }
 };
 
-const handleModalSubmit = async (payload: { formData: any; onSuccess: () => void; onError: (msg: string) => void }) => {
+const handleModalSubmit = async (payload: {
+  formData: any;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}) => {
   const { formData, onSuccess, onError } = payload;
   console.log('handleModalSubmit called with formData:', formData);
   clearStore();
@@ -145,25 +184,15 @@ const handleModalSubmit = async (payload: { formData: any; onSuccess: () => void
     for (const url of rawUrls) {
       try {
         console.log(`Creating task for URL: ${url}`);
-        const response = await taskApi.createTask(url, {
-          userAgent: formData.userAgent || undefined,
-          referrer: formData.referrer || undefined,
-          track: formData.track,
-          language: formData.language,
-          proxy: formData.proxy,
-          actions: formData.actions,
-          timeout: formData.timeout,
-          delay: formData.delay,
-          pptr: formData.pptr,
-          disableScript: formData.disableScript,
-          cloudflare: formData.cloudflare,
-          extraHeaders: formData.extraHeaders,
-        } as any);
+        const response = await taskApi.createTask(url, formData);
         console.log(`Task creation response for ${url}:`, response);
         if (response?.webpageId) {
           console.log(`Adding webpageId to store: ${response.webpageId}`);
           addWebpageId(response.webpageId);
-          console.log(`WebpageId added. Current store:`, useWebpageStore().createdWebpageIds.value);
+          console.log(
+            `WebpageId added. Current store:`,
+            useWebpageStore().createdWebpageIds.value,
+          );
           successCount++;
         } else {
           console.log(`No webpageId in response for ${url}:`, response);
@@ -181,12 +210,18 @@ const handleModalSubmit = async (payload: { formData: any; onSuccess: () => void
     if (successCount > 0) {
       onSuccess();
       console.log('All successful URLs processed. Navigating to /tasks...');
-      console.log('Final webpage store:', useWebpageStore().createdWebpageIds.value);
+      console.log(
+        'Final webpage store:',
+        useWebpageStore().createdWebpageIds.value,
+      );
       await router.push('/tasks');
       console.log('Navigation completed');
     } else {
       const details = lastError?.response?.data?.details;
-      const errorMsg = lastError?.response?.data?.error || lastError?.message || 'Unknown error';
+      const errorMsg =
+        lastError?.response?.data?.error ||
+        lastError?.message ||
+        'Unknown error';
       const formattedError = details ? `${errorMsg} (${details})` : errorMsg;
       onError(`Failed to create tasks: ${formattedError}`);
     }

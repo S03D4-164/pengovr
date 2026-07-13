@@ -6,22 +6,7 @@ import fs from 'fs';
 import path from 'path';
 
 interface ScrapeOptions {
-  userAgent?: string;
-  referrer?: string;
-  period?: number;
-  timeout?: number;
-  delay?: number;
-  counter?: number;
-  existingWebpageId?: string;
-  language?: string;
-  disableScript?: boolean;
-  proxy?: string;
-  actions?: string;
-  pptr?: string;
-  websiteId?: string;
-  cloudflare?: boolean;
-  extraHeaders?: string;
-  track?: string;
+  [key: string]: any;  // 任意のオプションを受け入れ
 }
 
 interface ScrapeResult {
@@ -37,6 +22,7 @@ class Scraper {
     url: string,
     options: ScrapeOptions = {},
   ): Promise<ScrapeResult> {
+    console.log(`[Scraper] Starting scrape with options:`, JSON.stringify(options));
     // APIから渡された既存のIDがある場合はそれを使用し、なければ新規生成する
     const websiteId =
       options.websiteId || crypto.randomBytes(12).toString('hex');
@@ -82,6 +68,9 @@ class Scraper {
         disableScript: options.disableScript,
         proxy: options.proxy,
         actions: options.actions,
+        noenrich: options.noenrich,
+        recordHar: options.recordHar,
+        scrot: options.scrot,
       },
       favicon: [],
       screenshots: [],
@@ -91,6 +80,11 @@ class Scraper {
     const processedWebpage = await playwget(webpage);
     if (!processedWebpage) {
       throw new Error('playwget failed to process the URL');
+    }
+
+    // Ensure option is preserved in the processed webpage
+    if (!processedWebpage.option) {
+      processedWebpage.option = webpage.option;
     }
 
     // 1. Upload artifacts to SeaweedFS and get storage IDs/Keys

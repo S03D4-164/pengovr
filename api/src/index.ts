@@ -177,6 +177,18 @@ createBullBoard({
 // Redis接続がある場合のみ、リスナーやスケジューラを開始
 redis.once('ready', () => {
   console.log('Redis is ready, starting listeners...');
+
+  // Clear queues on startup
+  (async () => {
+    try {
+      await scrapingQueue.obliterate({ force: true });
+      await enrichmentQueue.obliterate({ force: true });
+      console.log('[BullMQ] Queues cleared successfully via obliterate.');
+    } catch (err) {
+      console.error('[BullMQ] Failed to clear queues:', err);
+    }
+  })();
+
   // Start BullMQ result listener
   const resultListener = new ResultListener(redis, enrichmentQueue);
   resultListener.listen();

@@ -9,20 +9,7 @@ const tasksRouter: Router = Router();
 interface TaskResponse {
   id: string;
   url: string;
-  options: {
-    userAgent?: string;
-    referrer?: string;
-    language?: string;
-    disableScript?: boolean;
-    proxy?: string;
-    actions?: string;
-    timeout?: number;
-    delay?: number;
-    pptr?: string;
-    cloudflare?: boolean;
-    extraHeaders?: string;
-    track?: string;
-  };
+  options: any;
   status: string;
   createdAt: Date;
   updatedAt?: Date;
@@ -59,7 +46,9 @@ tasksRouter.post('/', async (req: any, res: any) => {
     // --- Websiteの作成とGSB連携を追加 ---
     let website = await WebsiteModel.findOne({ url: taskUrl });
     if (!website) {
-      console.log(`[${timestamp}] Creating new Website document via Task route: ${taskUrl}`);
+      console.log(
+        `[${timestamp}] Creating new Website document via Task route: ${taskUrl}`,
+      );
       website = new WebsiteModel({
         url: taskUrl,
         gsb: { lookup: { matches: [] } },
@@ -80,7 +69,9 @@ tasksRouter.post('/', async (req: any, res: any) => {
         },
         { jobId: gsbTaskId },
       );
-      console.log(`[${timestamp}] GSB lookup task queued for new website via Task route`);
+      console.log(
+        `[${timestamp}] GSB lookup task queued for new website via Task route`,
+      );
     }
     // ----------------------------------
 
@@ -103,12 +94,18 @@ tasksRouter.post('/', async (req: any, res: any) => {
         //cloudflare: taskOptions.cloudflare || false,
         exHeaders: taskOptions.extraHeaders || undefined,
         track: taskOptions.track || undefined,
+        noenrich: taskOptions.noenrich || false,
+        recordHar: taskOptions.recordHar || false,
+        scrot: taskOptions.scrot || false,
       },
       status: 0, // 0 = pending, will be updated by worker
     });
     await webpage.save();
-    console.log(`[${timestamp}] Webpage created via Task route. ID: ${webpage._id}`);
+    console.log(
+      `[${timestamp}] Webpage created via Task route. ID: ${webpage._id}`,
+    );
 
+    /*
     const task = new Task({
       id: taskId,
       url: taskUrl,
@@ -123,25 +120,31 @@ tasksRouter.post('/', async (req: any, res: any) => {
         delay: taskOptions.delay || 5,
         extraHeaders: taskOptions.extraHeaders || null,
         track: taskOptions.track || null,
+        noenrich: taskOptions.noenrich || false,
+        recordHar: taskOptions.recordHar || false,
+        scrot: taskOptions.scrot || false,
       },
       webpageId: webpage._id.toString(), // Set webpageId immediately
       status: 'pending',
     });
+    */
 
-    await task.save();
-    console.log(`[${timestamp}] Task record saved. ID: ${taskId}`);
+    //await task.save();
+    //console.log(`[${timestamp}] Task record saved. ID: ${taskId}`);
 
     // Add to Redis queue using BullMQ for processing
     const scrapingQueue = req.app.locals.scrapingQueue;
-    console.log(`[${timestamp}] Adding task to BullMQ "scraping-tasks" queue...`);
+    console.log(
+      `[${timestamp}] Adding task to BullMQ "scraping-tasks" queue...`,
+    );
     await scrapingQueue.add(
       'scrape',
       {
         id: taskId,
         url: taskUrl,
-        options: task.options,
+        options: taskOptions,
         webpageId: webpage._id.toString(),
-        webpage: webpage.toObject(), // Workerが必要なデータをすべて含める
+        //webpage: webpage.toObject(), // Workerが必要なデータをすべて含める
       },
       {
         jobId: taskId, // 二重実行防止 (重複排除)
@@ -157,16 +160,18 @@ tasksRouter.post('/', async (req: any, res: any) => {
 
     res.status(201).json({
       message: 'Task created successfully',
-      taskId,
+      //taskId,
       webpageId: webpage._id.toString(), // Return webpageId immediately
+      /*
       task: {
         id: taskId,
         url: taskUrl,
-        options: task.options,
+        options: taskOptions,
         status: task.status,
         webpageId: webpage._id.toString(),
         createdAt: task.createdAt,
       },
+      */
     });
   } catch (error) {
     console.error('Error creating task:', error);
@@ -205,7 +210,9 @@ tasksRouter.get('/', async (req: any, res: any) => {
 // Get a specific task
 tasksRouter.get('/:id', async (req: any, res: any) => {
   try {
-    const taskItem = await Task.findOne({ id: req.params.id }).populate('webpageId');
+    const taskItem = await Task.findOne({ id: req.params.id }).populate(
+      'webpageId',
+    );
 
     if (!taskItem) {
       return res.status(404).json({ error: 'Task not found' });
@@ -226,12 +233,15 @@ tasksRouter.get('/:id', async (req: any, res: any) => {
             {
               _id: (taskItem.webpageId as any)._id.toString(),
               taskId: taskItem.id,
-              url: (taskItem.webpageId as any).url || (taskItem.webpageId as any).input,
+              url:
+                (taskItem.webpageId as any).url ||
+                (taskItem.webpageId as any).input,
               title: (taskItem.webpageId as any).title || 'Scraped Page',
               screenshot: (taskItem.webpageId as any).thumbnail || null,
               response: {
                 status: (taskItem.webpageId as any).status || 0,
-                statusText: (taskItem.webpageId as any).status >= 400 ? 'Error' : 'OK',
+                statusText:
+                  (taskItem.webpageId as any).status >= 400 ? 'Error' : 'OK',
                 timestamp: (taskItem.webpageId as any).createdAt,
               },
               scrapedAt: (taskItem.webpageId as any).createdAt,

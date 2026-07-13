@@ -38,6 +38,7 @@ async function main() {
 
         // Returning the result here sends it to the BullMQ completion event
         // The result-listener.ts in the API side will receive this.
+        console.log(result);
         return {
           success: true,
           ...result,
