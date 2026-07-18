@@ -2,7 +2,6 @@ import express, { Router } from 'express';
 import WebsiteModel from '../models/website';
 import { v4 as uuidv4 } from 'uuid';
 import WebpageModel from '../models/webpage';
-import Task from '../models/tasks';
 
 const router: Router = express.Router();
 
@@ -10,7 +9,10 @@ const router: Router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] WEBSITE_QUERY_REQUEST - IP: ${req.ip}, Params:`, req.query);
+    console.log(
+      `[${timestamp}] WEBSITE_QUERY_REQUEST - IP: ${req.ip}, Params:`,
+      req.query,
+    );
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -90,7 +92,9 @@ router.get('/:id', async (req, res) => {
     const website = await WebsiteModel.findById(req.params.id).populate('last');
 
     if (!website) {
-      console.log(`[${timestamp}] WEBSITE_DETAIL_NOT_FOUND - ID: ${req.params.id}`);
+      console.log(
+        `[${timestamp}] WEBSITE_DETAIL_NOT_FOUND - ID: ${req.params.id}`,
+      );
       return res.status(404).json({ error: 'Website not found' });
     }
 
@@ -117,18 +121,15 @@ router.post('/', async (req, res) => {
     // Check if website already exists
     let website = await WebsiteModel.findOne({ url });
 
-    console.log(`[${timestamp}] Website lookup result: ${website ? 'Existing' : 'New'}`);
+    console.log(
+      `[${timestamp}] Website lookup result: ${website ? 'Existing' : 'New'}`,
+    );
 
     if (!website) {
       // Create new website if it doesn't exist
       console.log(`[${timestamp}] Creating new Website document for: ${url}`);
       website = new WebsiteModel({
         url,
-        gsb: {
-          lookup: {
-            matches: [],
-          },
-        },
       });
       await website.save();
       console.log(`[${timestamp}] Website saved. ID: ${website._id}`);
@@ -148,55 +149,40 @@ router.post('/', async (req, res) => {
         },
         { jobId: gsbTaskId },
       );
-      console.log(`[${timestamp}] GSB lookup task successfully queued in ${enrichmentQueue.name}`);
+      console.log(
+        `[${timestamp}] GSB lookup task successfully queued in ${enrichmentQueue.name}`,
+      );
     } else {
       // If website already exists, GSB lookup is not queued here.
-      console.log(`[${timestamp}] Website "${url}" already exists. Skipping GSB task generation.`);
+      console.log(
+        `[${timestamp}] Website "${url}" already exists. Skipping GSB task generation.`,
+      );
     }
 
     // Create webpage for scraping task
     console.log(`[${timestamp}] Creating Webpage entry for scraping...`);
     const webpage = new WebpageModel({
       input: url,
-      url: url,
-      option: {
-        userAgent: options.userAgent || undefined,
-        referer: options.referrer || undefined,
-        timeout: options.timeout || 30,
-        delay: options.delay || 5,
-      },
-      status: 0, // 0 = pending, will be updated by worker
+      option: options,
     });
     await webpage.save();
     console.log(`[${timestamp}] Webpage created. ID: ${webpage._id}`);
 
     // Create task for worker
     const taskId = uuidv4();
-    console.log(`[${timestamp}] Creating Scraping Task. TaskID: ${taskId}`);
-    const task = new Task({
-      id: taskId,
-      url: url,
-      options: {
-        userAgent: options.userAgent || null,
-        referrer: options.referrer || null,
-      },
-      webpageId: webpage._id.toString(),
-      status: 'pending',
-    });
-    await task.save();
-    console.log(`[${timestamp}] Scraping Task saved to DB.`);
-
     // Add to BullMQ queue for processing
-    console.log(`[${timestamp}] Adding task to BullMQ "scraping-tasks" queue...`);
+    console.log(
+      `[${timestamp}] Adding task to BullMQ "scraping-tasks" queue...`,
+    );
     const scrapingQueue = req.app.locals.scrapingQueue;
     await scrapingQueue.add(
       'scrape',
       {
         id: taskId,
         url: url,
-        options: task.options,
+        options: options,
         webpageId: webpage._id.toString(),
-        webpage: webpage.toObject(), // Workerが必要なデータをすべて含める
+        websiteId: website._id.toString(),
       },
       {
         jobId: taskId, // 重複排除
@@ -206,7 +192,9 @@ router.post('/', async (req, res) => {
     );
     console.log(`[${timestamp}] Scraping Task successfully queued to BullMQ.`);
 
-    console.log(`[${timestamp}] WEBSITE_CREATE_SUCCESS - WebsiteID: ${website._id}`);
+    console.log(
+      `[${timestamp}] WEBSITE_CREATE_SUCCESS - WebsiteID: ${website._id}`,
+    );
     res.status(201).json(website);
   } catch (error) {
     const errTimestamp = new Date().toISOString();
@@ -269,7 +257,9 @@ router.post('/:id/gsb-lookup', async (req, res) => {
       { jobId: gsbTaskId },
     );
 
-    console.log(`GSB lookup task queued for website ${website._id}: ${website.url}`);
+    console.log(
+      `GSB lookup task queued for website ${website._id}: ${website.url}`,
+    );
     res.json({ message: 'GSB lookup task queued successfully' });
   } catch (error) {
     console.error('Error queuing GSB lookup:', error);

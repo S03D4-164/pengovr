@@ -32,7 +32,9 @@ async function syncYaraRulesToS3() {
         ContentType: 'application/json',
       }),
     );
-    console.log('[YARA] Successfully synchronized rules to S3 (rules/yara.json)');
+    console.log(
+      '[YARA] Successfully synchronized rules to S3 (rules/yara.json)',
+    );
   } catch (error: any) {
     console.error('[YARA] Failed to sync rules to S3:', error.message);
   }
@@ -50,14 +52,18 @@ yarasRouter.get('/json', async (req: any, res: any) => {
 
     const body = await data.Body?.transformToString();
     if (!body) {
-      return res.status(404).json({ error: 'YARA rules JSON not found in storage' });
+      return res
+        .status(404)
+        .json({ error: 'YARA rules JSON not found in storage' });
     }
 
     res.setHeader('Content-Type', 'application/json');
     res.send(body);
   } catch (error: any) {
     console.error('Error fetching YARA rules from S3:', error.message);
-    res.status(500).json({ error: 'Failed to retrieve YARA rules from storage' });
+    res
+      .status(500)
+      .json({ error: 'Failed to retrieve YARA rules from storage' });
   }
 });
 
@@ -72,7 +78,9 @@ yarasRouter.post('/', async (req: any, res: any) => {
 
     const existingRule = await YaraModel.findOne({ name });
     if (existingRule) {
-      return res.status(400).json({ error: 'Rule with this name already exists' });
+      return res
+        .status(400)
+        .json({ error: 'Rule with this name already exists' });
     }
 
     const yaraRule = new YaraModel({
@@ -123,7 +131,10 @@ yarasRouter.get('/', async (req: any, res: any) => {
     }
 
     const total = await YaraModel.countDocuments(query);
-    const yaraRules = await YaraModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const yaraRules = await YaraModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.json({
       results: yaraRules.map(
@@ -186,7 +197,9 @@ yarasRouter.put('/:id', async (req: any, res: any) => {
     if (name && name !== yaraRule.name) {
       const existingRule = await YaraModel.findOne({ name });
       if (existingRule) {
-        return res.status(400).json({ error: 'Rule with this name already exists' });
+        return res
+          .status(400)
+          .json({ error: 'Rule with this name already exists' });
       }
       yaraRule.name = name;
     }
@@ -234,40 +247,6 @@ yarasRouter.delete('/:id', async (req: any, res: any) => {
   } catch (error) {
     console.error('Error deleting YARA rule:', error);
     res.status(500).json({ error: 'Failed to delete YARA rule' });
-  }
-});
-
-// Scan content with YARA rules
-yarasRouter.post('/scan', async (req: any, res: any) => {
-  try {
-    const { content } = req.body;
-
-    if (!content) {
-      return res.status(400).json({ error: 'Content is required' });
-    }
-
-    const yararules = await YaraModel.find();
-    if (!yararules || yararules.length === 0) {
-      return res.json({ results: [] });
-    }
-
-    // Simple rule matching simulation (since we don't have yara-x in API)
-    const results: Array<{ id: string; tags: string[]; meta: Record<string, any> }> = [];
-
-    for (const rule of yararules) {
-      if (rule.rule && content.includes(rule.rule.substring(0, 50))) {
-        results.push({
-          id: rule.name,
-          tags: [],
-          meta: {},
-        });
-      }
-    }
-
-    res.json({ results });
-  } catch (error) {
-    console.error('Error scanning content with YARA:', error);
-    res.status(500).json({ error: 'Failed to scan content' });
   }
 });
 

@@ -51,6 +51,7 @@ const config = {
     secretKey: process.env.S3_SECRET_KEY || 'pengovr-password',
     bucket: process.env.S3_BUCKET || 'pengovr-assets',
     region: process.env.S3_REGION || 'us-east-1',
+    clearBucket: process.env.S3_CLEAR_BUCKET || 'true',
   },
 };
 

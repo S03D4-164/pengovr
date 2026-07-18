@@ -24,14 +24,24 @@ async function getJsonFromS3(key: string) {
     if (e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404) {
       return null;
     }
-    console.error(`[ResultProcessor] Error fetching JSON from S3 (${key}):`, e.message);
+    console.error(
+      `[ResultProcessor] Error fetching JSON from S3 (${key}):`,
+      e.message,
+    );
     return null;
   }
 }
 
-export function initResultListeners(redisConnection: any, enrichmentQueue: Queue) {
-  console.log(`[ResultProcessor] Initializing listeners for queue: ${config.enrichmentQueue}`);
-  const enrichmentEvents = new QueueEvents(config.enrichmentQueue, { connection: redisConnection });
+export function initResultListeners(
+  redisConnection: any,
+  enrichmentQueue: Queue,
+) {
+  console.log(
+    `[ResultProcessor] Initializing listeners for queue: ${config.enrichmentQueue}`,
+  );
+  const enrichmentEvents = new QueueEvents(config.enrichmentQueue, {
+    connection: redisConnection,
+  });
 
   enrichmentEvents.on('completed', async ({ jobId }) => {
     console.log(
@@ -57,7 +67,10 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
           `[ResultProcessor] MongoDB: GSB matches (${gsbResult.gsb.matches?.length || 0}) saved for Website ${gsbResult.websiteId}`,
         );
         await s3Client.send(
-          new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: `results/gsb-${jobId}.json` }),
+          new DeleteObjectCommand({
+            Bucket: config.s3.bucket,
+            Key: `results/gsb-${jobId}.json`,
+          }),
         );
         return;
       }
@@ -69,12 +82,16 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
         const webpageData = { ...enrichResult.webpage };
 
         // harfile が ObjectId ではなく S3 キー（文字列パス）の場合は削除して CastError を防ぐ
-        if (webpageData.harfile && !mongoose.Types.ObjectId.isValid(webpageData.harfile)) {
+        if (
+          webpageData.harfile &&
+          !mongoose.Types.ObjectId.isValid(webpageData.harfile)
+        ) {
           delete webpageData.harfile;
         }
 
         // jobId はプレフィックス付き（yara-IDなど）なので data.webpageId を優先
-        const targetWebpageId = job.data.webpageId || webpageData._id || webpageData.id;
+        const targetWebpageId =
+          job.data.webpageId || webpageData._id || webpageData.id;
 
         // ホワイトリスト方式: 解析結果として更新を許可するフィールドのみを抽出
         const updateFields: any = {};
@@ -99,7 +116,9 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
         console.log(
           `[ResultProcessor] MongoDB: Updating Webpage ${targetWebpageId} with results from ${job.name}...`,
         );
-        await WebpageModel.findByIdAndUpdate(targetWebpageId, { $set: updateFields });
+        await WebpageModel.findByIdAndUpdate(targetWebpageId, {
+          $set: updateFields,
+        });
 
         if (enrichResult.responses) {
           console.log(
@@ -117,7 +136,11 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
               }
             });
 
-            if (resFields.wappalyzer || resFields.yara || resFields.remoteAddress) {
+            if (
+              resFields.wappalyzer ||
+              resFields.yara ||
+              resFields.remoteAddress
+            ) {
               console.log(
                 `[ResultProcessor] Response ${resId} updated by ${job.name}: ${Object.keys(resFields).join(', ')}`,
               );
@@ -139,7 +162,10 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
                 );
               }
             } catch (err: any) {
-              console.error(`[ResultProcessor] Error updating response ${resId}:`, err.message);
+              console.error(
+                `[ResultProcessor] Error updating response ${resId}:`,
+                err.message,
+              );
             }
           }
         }
@@ -147,12 +173,15 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
           `[ResultProcessor] MongoDB: Enrichment results successfully synced for Webpage ${targetWebpageId}`,
         );
 
-        // 1. 解析ワーカーが作成した一時的な結果ファイルを削除
-        await s3Client.send(new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }));
+        // 解析ワーカーが作成した一時的な結果ファイルを削除
+        await s3Client.send(
+          new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }),
+        );
 
         return;
       }
     } else if (job.name === 'enrichment_finalizer') {
+      console.log(job);
       // すべての子ジョブ (yara, wappalyzer, dns) が成功した後にここが実行される
       if (job.data.resultKey) {
         console.log(
@@ -165,7 +194,9 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
               Key: job.data.resultKey,
             }),
           )
-          .catch((err) => console.warn(`[ResultProcessor] Cleanup failed: ${err.message}`));
+          .catch((err) =>
+            console.warn(`[ResultProcessor] Cleanup failed: ${err.message}`),
+          );
       }
       return;
     } else if (job.name === 'gemini_explain') {
@@ -185,17 +216,25 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
           `[ResultProcessor] MongoDB: Saving Gemini explanation to ${job.data.targetType} ${targetId}...`,
         );
         if (job.data.targetType === 'response') {
-          await ResponseModel.findByIdAndUpdate(targetId, { geminiExplanation: explanation });
+          await ResponseModel.findByIdAndUpdate(targetId, {
+            geminiExplanation: explanation,
+          });
         } else {
-          await WebpageModel.findByIdAndUpdate(targetId, { geminiExplanation: explanation });
+          await WebpageModel.findByIdAndUpdate(targetId, {
+            geminiExplanation: explanation,
+          });
         }
-        console.log(`[ResultProcessor] MongoDB: Gemini explanation successfully saved.`);
+        console.log(
+          `[ResultProcessor] MongoDB: Gemini explanation successfully saved.`,
+        );
         return;
       }
     } else if (job.name === 'process_har') {
       const { s3Key, webpageId } = job.data;
       if (s3Key && webpageId) {
-        console.log(`[ResultProcessor] Persisting HAR from S3 to MongoDB: ${s3Key}`);
+        console.log(
+          `[ResultProcessor] Persisting HAR from S3 to MongoDB: ${s3Key}`,
+        );
         try {
           const harBuffer = await downloadBuffer(s3Key);
           if (harBuffer && harBuffer.length > 0) {
@@ -203,7 +242,9 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
               har: harBuffer,
               webpage: webpageId,
             });
-            console.log(`[ResultProcessor] MongoDB: Saving HAR binary for Webpage ${webpageId}...`);
+            console.log(
+              `[ResultProcessor] MongoDB: Saving HAR binary for Webpage ${webpageId}...`,
+            );
             const savedHar = await harDoc.save();
 
             await WebpageModel.findByIdAndUpdate(webpageId, {
@@ -214,10 +255,15 @@ export function initResultListeners(redisConnection: any, enrichmentQueue: Queue
             );
 
             // DB保存完了後、S3の一時ファイル（ZIP）を削除
-            await s3Client.send(new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }));
+            await s3Client.send(
+              new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }),
+            );
           }
         } catch (err: any) {
-          console.error(`[ResultProcessor] Failed to persist HAR for ${webpageId}:`, err.message);
+          console.error(
+            `[ResultProcessor] Failed to persist HAR for ${webpageId}:`,
+            err.message,
+          );
         }
         return;
       }

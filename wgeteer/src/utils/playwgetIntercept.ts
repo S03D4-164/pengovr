@@ -1,46 +1,6 @@
 import crypto from 'crypto';
 import logger from './logger.js';
-import { uploadBuffer } from './s3.js';
-
-async function savePayload(
-  responseBuffer: Buffer,
-  payloadsCollector?: Array<any>,
-): Promise<string | undefined> {
-  try {
-    const md5Hash = crypto
-      .createHash('md5')
-      .update(responseBuffer)
-      .digest('hex');
-    const generatedId = crypto.randomBytes(12).toString('hex');
-    const s3Key = `payloads/${md5Hash}`;
-
-    if (payloadsCollector) {
-      // Avoid duplicate payloads in memory based on MD5
-      const exists = payloadsCollector.some((p) => p.md5 === md5Hash);
-      if (!exists) {
-        await uploadBuffer(s3Key, responseBuffer);
-
-        const payloadData = {
-          _id: generatedId,
-          md5: md5Hash,
-          s3Key: s3Key,
-        };
-        payloadsCollector.push(payloadData);
-      } else {
-        // Find existing to return its generated ID
-        const existing = payloadsCollector.find((p) => p.md5 === md5Hash);
-        return existing._id;
-      }
-    } else {
-      await uploadBuffer(s3Key, responseBuffer);
-    }
-
-    return generatedId;
-  } catch (err: any) {
-    logger.error(err);
-    return undefined;
-  }
-}
+import { savePayload } from './payload.js';
 
 async function saveResponse(
   interceptedResponse: any,

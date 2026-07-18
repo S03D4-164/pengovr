@@ -1,14 +1,20 @@
 <template>
   <!-- URL Modal -->
   <div v-if="showUrlModal" class="modal modal-open" @click="closeUrlModal">
-    <div class="modal-box max-w-5xl p-0 overflow-hidden border border-base-300" @click.stop>
-      <div class="flex items-center justify-between p-2 border-b border-base-200 bg-base-200/50">
+    <div
+      class="modal-box max-w-4xl p-0 overflow-hidden border border-base-300"
+      @click.stop
+    >
+      <div
+        class="flex items-center justify-between p-2 border-b border-base-200 bg-base-200/50"
+      >
         <h3 class="font-bold text-lg">Add URLs</h3>
-        <button @click="closeUrlModal" class="btn btn-ghost btn-sm btn-circle">&times;</button>
+        <button @click="closeUrlModal" class="btn btn-ghost btn-sm btn-circle">
+          &times;
+        </button>
       </div>
       <div class="p-4 overflow-auto max-h-[75vh] space-y-4">
         <div class="form-control w-full">
-          <span class="label-text font-bold block mb-2">URLs (one per line)</span>
           <textarea
             v-model="urlsText"
             class="textarea textarea-bordered w-full h-32"
@@ -20,7 +26,10 @@
           <div class="bg-base-200/30 p-2 rounded-lg border border-base-200">
             <label class="inline-label">
               <span class="label-text font-bold">Track Mode</span>
-              <select v-model="track" class="select select-bordered select-sm w-full">
+              <select
+                v-model="track"
+                class="select select-bordered select-sm w-full"
+              >
                 <option value="0" selected>-</option>
                 <option value="1">1hx24 (no overwrite)</option>
                 <option value="2">1hx24 (overwrite)</option>
@@ -32,7 +41,11 @@
         </div>
 
         <div class="pt-4">
-          <button class="btn btn-primary w-full" @click="submitUrls" :disabled="loading">
+          <button
+            class="btn btn-primary w-full"
+            @click="submitUrls"
+            :disabled="loading"
+          >
             {{ loading ? 'Submitting...' : 'Add URLs' }}
           </button>
           <div
@@ -80,6 +93,7 @@
 import { ref, onMounted } from 'vue';
 import { userAgentApi } from '../api';
 import ScrapingOptionsForm from './ScrapingOptionsForm.vue';
+import { SCRAPING_OPTIONS } from '../config/scrapingOptions';
 
 const emit = defineEmits(['submit']);
 
@@ -92,6 +106,17 @@ interface UserAgent {
 const showUrlModal = ref(false);
 const urlsText = ref('https://');
 
+// SCRAPING_OPTIONS から初期値オブジェクトを動的に組み立てる
+const initialOptions = SCRAPING_OPTIONS.reduce(
+  (acc, option) => {
+    acc[option.key] = option.default;
+    return acc;
+  },
+  {} as Record<string, any>,
+);
+
+// 組み立てたオブジェクトを ref に渡す
+//const scrapingOptions = ref(initialOptions);
 const scrapingOptions = ref({
   userAgent: '',
   language: 'ja',
@@ -157,7 +182,10 @@ const handlePaste = (e: ClipboardEvent) => {
   const startPos = textarea.selectionStart;
   const endPos = textarea.selectionEnd;
 
-  const newValue = textarea.value.substring(0, startPos) + text + textarea.value.substring(endPos);
+  const newValue =
+    textarea.value.substring(0, startPos) +
+    text +
+    textarea.value.substring(endPos);
   urlsText.value = newValue;
 
   setTimeout(() => {
@@ -171,14 +199,14 @@ const handlePaste = (e: ClipboardEvent) => {
 const submitUrls = () => {
   const formData = {
     urlsText: urlsText.value,
-    track: track.value,
+    //track: track.value,
     ...scrapingOptions.value,
   };
 
   loading.value = true;
   message.value = '';
   error.value = false;
-
+  console.log('submitUrls formData:', formData);
   // Emit event to parent component
   emit('submit', {
     formData,

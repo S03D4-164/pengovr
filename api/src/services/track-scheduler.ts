@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import Website from '../models/website';
 import WebpageModel from '../models/webpage';
-import Task from '../models/tasks';
 import { logError, shouldLog } from '../utils/logger';
 
 /**
@@ -26,7 +25,7 @@ export const initTrackScheduler = async (
     }
   }
 
-  // 2. Add the repeatable job (runs every minute)
+  // Add the repeatable job (runs every minute)
   // Using a unique job id to prevent duplicate schedulers
   await schedulerQueue.add(
     'check-tracking-tasks',
@@ -38,7 +37,7 @@ export const initTrackScheduler = async (
     },
   );
 
-  // 3. Worker to process the scheduler job
+  // Worker to process the scheduler job
   const worker = new Worker(
     'tracking-scheduler',
     async (job: Job) => {
@@ -51,16 +50,6 @@ export const initTrackScheduler = async (
       }).populate('last');
 
       for (const site of websites) {
-        // Skip if there's already an active (pending/processing) task for this site
-        const lastStatus = (site.last as any)?.status;
-        if (
-          lastStatus === 'pending' ||
-          lastStatus === 'processing' ||
-          lastStatus === 0
-        ) {
-          continue;
-        }
-
         const lastScrapeTime = site.last
           ? new Date((site.last as any).createdAt).getTime()
           : 0;
@@ -74,24 +63,14 @@ export const initTrackScheduler = async (
             `[${timestamp}] [Track Scheduler] Conditions met for: ${site.url}. Pre-creating Webpage ${webpageId} and queuing job ${jobId}.`,
           );
 
-          // 1. Pre-create Webpage document
+          // Pre-create Webpage document
           const webpage = new WebpageModel({
             _id: webpageId,
             input: site.url,
-            status: 0, // 数値の 0 (pending) に統一
           });
           await webpage.save();
 
-          // 2. Create Task document linked to the Webpage
-          const task = new Task({
-            id: jobId,
-            url: site.url,
-            status: 'pending',
-            webpageId: webpageId,
-          });
-          await task.save();
-
-          // 3. Update Website to point to the new pending Webpage immediately
+          // Update Website to point to the new pending Webpage immediately
           site.last = webpageId as any;
           await site.save();
 
@@ -103,12 +82,8 @@ export const initTrackScheduler = async (
               url: site.url,
               options: {
                 ...site.track.option,
-                counter: site.track.counter,
-                period: site.track.period,
-                websiteId: site._id.toString(),
               },
               webpageId: webpageId.toString(),
-              webpage: webpage.toObject(),
             },
             { jobId },
           );

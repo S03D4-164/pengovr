@@ -5,7 +5,6 @@ import config from '../config';
 import zlib from 'zlib';
 import s3Client, { downloadBuffer } from '../utils/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import Task from '../models/tasks';
 import WebpageModel from '../models/webpage';
 import WebsiteModel from '../models/website';
 import mongoose from 'mongoose';
@@ -13,8 +12,6 @@ import YaraModel from '../models/yara';
 import ScreenshotModel from '../models/screenshot';
 import { logError, shouldLog } from '../utils/logger';
 
-// Dynamic import or absolute models import depending on your file structure
-// Note: We need to import the exact schemas for request, response, payload
 import RequestModel from '../models/request';
 import ResponseModel from '../models/response';
 import PayloadModel from '../models/payload';
@@ -54,21 +51,10 @@ export class ResultListener {
           typeof returnvalue === 'string'
             ? JSON.parse(returnvalue)
             : returnvalue;
+        console.log(resultMeta);
         const { resultKey, error } = resultMeta;
         let { webpageId } = resultMeta;
 
-        /*
-        const task = await Task.findOne({ id: jobId });
-        if (!task) {
-          console.error(`Task ${jobId} not found in database`);
-          return;
-        }
-
-        // Ensure we update the existing webpage document created by the Task route to avoid duplicates
-        if (webpageId) {
-          webpageId = webpageId.toString();
-        }
-        */
         if (error) {
           throw new Error(error);
         }
@@ -77,7 +63,7 @@ export class ResultListener {
           throw new Error('No result key provided in job completion metadata');
         }
 
-        // 1. Download structured relation data from SeaweedFS
+        // Download structured relation data from SeaweedFS
         console.log(`Downloading result data from SeaweedFS key: ${resultKey}`);
         const resultBuffer = await downloadBuffer(resultKey);
         if (!resultBuffer || resultBuffer.length === 0) {
@@ -100,7 +86,7 @@ export class ResultListener {
         const screenshots = webpage.screenshots_data || [];
         const screenshotBuffer = webpage.thumbnail;
 
-        // 2. Perform MongoDB bulk inserts inside a transaction or sequential saves
+        // Perform MongoDB bulk inserts inside a transaction or sequential saves
         // First save child references (Payloads, Requests, Responses)
         // Workerが生成した一時的なIDと、DB上の実際のIDを紐付けるマップ
         const payloadIdMap = new Map<string, any>();
@@ -322,7 +308,7 @@ export class ResultListener {
         delete webpageData.payloads_data;
         delete webpageData.screenshots_data;
 
-        // 3. Save main webpage document
+        // Save main webpage document
         // Use findByIdAndUpdate to merge results into the existing document (placeholder)
         // We remove _id from webpageData to prevent Mongoose from trying to update the immutable ID field
         const { _id, id, ...updateFields } = webpageData;
@@ -360,7 +346,7 @@ export class ResultListener {
           `[ResultListener] MongoDB: Task ${jobId} status updated to "completed"`,
         );
 
-        // 8. Queue specialized enrichment tasks (Split into parallel jobs)
+        // Queue specialized enrichment tasks (Split into parallel jobs)
         console.log(
           `[ResultListener] DEBUG: webpageData.option =`,
           JSON.stringify(webpageData.option),
@@ -369,7 +355,7 @@ export class ResultListener {
           console.log(
             `[ResultListener] Skipping specialized enrichment tasks (yara, wappalyzer, dns) for Webpage ${webpageId} as noenrich option is enabled.`,
           );
-          if (resultKey) {
+          if (resultKey && !webpageData.option?.keeps3) {
             console.log(`[ResultListener] Cleaning up source: ${resultKey}`);
             await s3Client
               .send(
@@ -443,14 +429,6 @@ export class ResultListener {
         );
       } catch (err: any) {
         console.error(`Failed to process results for job ${jobId}:`, err);
-        /*
-        const task = await Task.findOne({ id: jobId });
-        if (task) {
-          task.status = 'failed';
-          task.error = err.message;
-          await task.save();
-        }
-        */
       }
     });
 
@@ -459,15 +437,6 @@ export class ResultListener {
       console.error(
         `[${timestamp}] Job ${jobId} failed in queue. Reason: ${failedReason}`,
       );
-
-      /*
-      const task = await Task.findOne({ id: jobId });
-      if (task) {
-        task.status = 'failed';
-        task.error = failedReason;
-        await task.save();
-      }
-        */
     });
   }
 }

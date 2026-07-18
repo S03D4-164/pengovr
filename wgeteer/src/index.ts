@@ -29,9 +29,8 @@ async function main() {
       try {
         // Execute scraping
         // The results (webpage, website, storage keys) will be returned
-        const result = await scraper.scrape(url, {
+        const result = await scraper.scrape(url, webpageId, {
           ...options,
-          existingWebpageId: webpageId,
         });
 
         console.log(`[Job ${job.id}] Completed successfully`);

@@ -6,7 +6,7 @@
 export interface OptionDefinition {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'checkbox' | 'select';
+  type: 'text' | 'number' | 'checkbox' | 'select' | 'textarea';
   default: any;
   placeholder?: string;
   options?: Array<{ value: any; label: string }>;
@@ -72,6 +72,22 @@ export const SCRAPING_OPTIONS: OptionDefinition[] = [
     max: 60,
     step: 5,
   },
+  // Actions
+  {
+    key: 'actions',
+    label: 'Actions',
+    type: 'textarea',
+    default: undefined,
+    placeholder: 'click>#id',
+  },
+  // Extra Headers
+  {
+    key: 'extraHeaders',
+    label: 'Extra Headers',
+    type: 'textarea',
+    default: undefined,
+    placeholder: 'Header: Value',
+  },
   // Disable Script
   {
     key: 'disableScript',
@@ -100,20 +116,17 @@ export const SCRAPING_OPTIONS: OptionDefinition[] = [
     type: 'checkbox',
     default: false,
   },
-  // Actions
+  // Disable Enrichment
   {
-    key: 'actions',
-    label: 'Actions',
-    type: 'text',
-    default: undefined,
-    placeholder: 'click>#id',
+    key: 'pageonly',
+    label: 'Save Webpage Only',
+    type: 'checkbox',
+    default: false,
   },
-  // Extra Headers
   {
-    key: 'extraHeaders',
-    label: 'Extra Headers',
-    type: 'text',
-    default: undefined,
-    placeholder: 'Header: Value',
+    key: 'keeps3',
+    label: 'Keep S3 files',
+    type: 'checkbox',
+    default: false,
   },
 ];

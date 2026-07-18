@@ -28,6 +28,19 @@
         </label>
       </template>
 
+      <!-- Textarea inputs -->
+      <template v-else-if="optionDef.type === 'textarea'">
+        <label class="inline-label">
+          <span class="label-text">{{ optionDef.label }}</span>
+          <textarea
+            :value="options[optionDef.key]"
+            @input="options[optionDef.key] = $event.target.value"
+            :placeholder="optionDef.placeholder"
+            class="textarea textarea-bordered w-full"
+          ></textarea>
+        </label>
+      </template>
+
       <!-- Select inputs -->
       <template v-else-if="optionDef.type === 'select'">
         <label class="inline-label">
@@ -106,6 +119,10 @@ const loadUserAgents = async () => {
       }));
       if (!options.value.userAgent && response.results.length > 0) {
         options.value.userAgent = response.results[0].userAgent;
+      }
+    } else {
+      if (userAgentOption) {
+        userAgentOption.options = [{ value: '-', label: '-' }];
       }
     }
   } catch (err) {

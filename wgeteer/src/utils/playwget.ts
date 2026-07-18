@@ -1,18 +1,10 @@
-import {
-  BrowserContext,
-  Page,
-  chromium,
-} from 'rebrowser-playwright-core';
+import { BrowserContext, Page, chromium } from 'rebrowser-playwright-core';
 //process.env.REBROWSER_PATCHES_DEBUG = '1';
-process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE =
-  'addBinding';
+process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE = 'addBinding';
 import { protectIt } from './playwright-afp/index.js';
 
 import logger from './logger.js';
-import {
-  saveRequest,
-  saveResponse,
-} from './playwgetIntercept.js';
+import { saveRequest, saveResponse } from './playwgetIntercept.js';
 import {
   cdpScreenshot,
   imgResize,
@@ -59,10 +51,7 @@ async function genPage(
   if (webpage.option?.lang) {
     exHeaders['Accept-Language'] = webpage.option.lang;
   }
-  if (
-    webpage.option?.userAgent &&
-    webpage.option.userAgent.length > 1
-  ) {
+  if (webpage.option?.userAgent && webpage.option.userAgent.length > 1) {
     options.userAgent = webpage.option.userAgent;
   }
   if (webpage.option?.disableScript) {
@@ -73,9 +62,7 @@ async function genPage(
   }
 
   if (webpage.option?.exHeaders) {
-    for (const line of webpage.option.exHeaders.split(
-      '\r\n',
-    )) {
+    for (const line of webpage.option.exHeaders.split('\r\n')) {
       const match = line.match(/^([^:]+):(.+)$/);
       if (match && match.length >= 3) {
         exHeaders[match[1].trim()] = match[2].trim();
@@ -86,11 +73,10 @@ async function genPage(
     options.extraHTTPHeaders = exHeaders;
   }
   try {
-    const browserContext =
-      await chromium.launchPersistentContext(
-        userDataDir,
-        options,
-      );
+    const browserContext = await chromium.launchPersistentContext(
+      userDataDir,
+      options,
+    );
     const permissions = ['notifications'];
     await browserContext.grantPermissions(permissions);
     //browserContext.setDefaultTimeout(30000);
@@ -145,13 +131,9 @@ async function playwget(webpage: any): Promise<any> {
   ];
   if (webpage.option?.proxy) {
     if (
-      webpage.option.proxy.match(
-        /^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}:\d{1,5}$/,
-      )
+      webpage.option.proxy.match(/^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}:\d{1,5}$/)
     ) {
-      chromiumArgs.push(
-        `--proxy-server=${webpage.option.proxy}`,
-      );
+      chromiumArgs.push(`--proxy-server=${webpage.option.proxy}`);
     }
   }
   //logger.debug(webpage.option);
@@ -204,19 +186,14 @@ async function playwget(webpage: any): Promise<any> {
   );
 
   if (!page || !browserContext) {
-    logger.error(
-      `[${pageId}] Failed to create page or browser context`,
-    );
+    logger.error(`[${pageId}] Failed to create page or browser context`);
     return;
   }
   //const browser = browserContext.browser();
 
   await page.setViewportSize({ width: 1280, height: 600 });
-  let waitUntilOption:
-    | 'load'
-    | 'domcontentloaded'
-    | 'networkidle'
-    | 'commit' = 'load';
+  let waitUntilOption: 'load' | 'domcontentloaded' | 'networkidle' | 'commit' =
+    'load';
   if (webpage.option?.dom) {
     waitUntilOption = 'domcontentloaded';
   }
@@ -249,17 +226,14 @@ async function playwget(webpage: any): Promise<any> {
     wsObj[ws.requestId]['messages'].push(ws.errorMessage);
     await wsObjToArray(wsObj[ws.requestId], ws.requestId);
   });
-  client.on(
-    'Network.webSocketFrameReceived',
-    async (ws) => {
-      //console.log('received', ws);
-      let msg = {
-        frame: 'received',
-        ...ws,
-      };
-      wsObj[ws.requestId]['messages'].push(msg);
-    },
-  );
+  client.on('Network.webSocketFrameReceived', async (ws) => {
+    //console.log('received', ws);
+    let msg = {
+      frame: 'received',
+      ...ws,
+    };
+    wsObj[ws.requestId]['messages'].push(msg);
+  });
   client.on('Network.webSocketFrameSent', async (ws) => {
     //console.log('sent', ws);
     let msg = {
@@ -268,26 +242,17 @@ async function playwget(webpage: any): Promise<any> {
     };
     wsObj[ws.requestId]['messages'].push(msg);
   });
-  client.on(
-    'Network.webSocketHandshakeResponseReceived',
-    async (ws) => {
-      //console.log('response', ws);
-      wsObj[ws.requestId]['response'] = ws.response;
-      await wsObjToArray(wsObj[ws.requestId], ws.requestId);
-    },
-  );
-  client.on(
-    'Network.webSocketWillSendHandshakeRequest',
-    async (ws) => {
-      //console.log('request', ws);
-      wsObj[ws.requestId]['request'] = ws.request;
-    },
-  );
+  client.on('Network.webSocketHandshakeResponseReceived', async (ws) => {
+    //console.log('response', ws);
+    wsObj[ws.requestId]['response'] = ws.response;
+    await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+  });
+  client.on('Network.webSocketWillSendHandshakeRequest', async (ws) => {
+    //console.log('request', ws);
+    wsObj[ws.requestId]['request'] = ws.request;
+  });
 
-  async function wsObjToArray(
-    ws: any,
-    interceptionId: String,
-  ) {
+  async function wsObjToArray(ws: any, interceptionId: String) {
     console.log(ws);
     try {
       const req = {
@@ -325,11 +290,7 @@ async function playwget(webpage: any): Promise<any> {
   });
   client.on(
     'Fetch.requestPaused',
-    async ({
-      requestId,
-      request,
-      responseStatusCode,
-    }: any) => {
+    async ({ requestId, request, responseStatusCode }: any) => {
       /*logger.debug(
         `[Intercepted] ${requestId}, ${responseStatusCode}, ${request.url}`,
       );*/
@@ -346,12 +307,9 @@ async function playwget(webpage: any): Promise<any> {
       };
       try {
         if (requestId) {
-          let response = await client.send(
-            'Fetch.getResponseBody',
-            {
-              requestId,
-            },
-          );
+          let response = await client.send('Fetch.getResponseBody', {
+            requestId,
+          });
           let newBody = (
             response as {
               body: string;
@@ -403,38 +361,40 @@ async function playwget(webpage: any): Promise<any> {
   });
 
   async function docToArray(request: any): Promise<void> {
-    try {
-      /*
+    if (!webpage.option?.pageonly) {
+      try {
+        /*
       logger.debug(
         `[Request] finished: ${request.method()} ${request.url().slice(0, 100)}`,
       );
       */
-      let req: any = await saveRequest(request, pageId);
-      //console.log(req);
-      const response = await request.response();
-      let res;
-      if (response) {
-        /*
+        let req: any = await saveRequest(request, pageId);
+        //console.log(req);
+        const response = await request.response();
+        let res;
+        if (response) {
+          /*
         logger.debug(
           `[Request] response: ${response.status()} ${response.url().slice(0, 100)}`,
         );
         */
-        res = await saveResponse(
-          response,
-          pageId,
-          responseCache,
-          payloadsCollector,
-        );
-        if (res && responseArray != null) {
-          responseArray.push(res);
+          res = await saveResponse(
+            response,
+            pageId,
+            responseCache,
+            payloadsCollector,
+          );
+          if (res && responseArray != null) {
+            responseArray.push(res);
+          }
+          req.interceptionId = res?.interceptionId;
         }
-        req.interceptionId = res?.interceptionId;
+        if (req && requestArray != null) {
+          requestArray.push(req);
+        }
+      } catch (error: any) {
+        logger.error(error);
       }
-      if (req && requestArray != null) {
-        requestArray.push(req);
-      }
-    } catch (error: any) {
-      logger.error(error);
     }
   }
   /*
@@ -489,9 +449,7 @@ async function playwget(webpage: any): Promise<any> {
       webpage.error = err.message;
     }
   }
-  logger.debug(
-    `[${pageId}] goto completed ${webpage.input}`,
-  );
+  logger.debug(`[${pageId}] goto completed ${webpage.input}`);
 
   try {
     webpage.url = page.url();
@@ -503,28 +461,19 @@ async function playwget(webpage: any): Promise<any> {
     const screenshot = await cdpScreenshot(client);
     const resizedImg = await imgResize(screenshot);
     webpage.thumbnail = resizedImg.toString('base64');
-    let fss = await saveFullscreenshot(
-      screenshot,
-      [],
-      screenshotsCollector,
-    );
+    let fss = await saveFullscreenshot(screenshot, [], screenshotsCollector);
     if (fss) {
       webpage.screenshot = fss;
     }
     // 追加スクリーンショット (OSデスクトップ)
-    if (webpage.option.scrot) {
+    if (webpage.option?.scrot) {
       const pngPath = `${dataDir}/${pageId}/screenshot.png`;
       try {
         // -b オプションでサイレント（ビープ音なし）に設定できます
-        execSync(
-          `DISPLAY=:${displayNum} scrot -b ${pngPath}`,
-        );
+        execSync(`DISPLAY=:${displayNum} scrot -b ${pngPath}`);
         //console.log('スクリーンショットの撮影が完了しました');
       } catch (error) {
-        console.error(
-          'スクリーンショットの撮影に失敗しました:',
-          error,
-        );
+        console.error('スクリーンショットの撮影に失敗しました:', error);
       }
       if (fs.existsSync(pngPath)) {
         const pngData = fs.readFileSync(pngPath);
@@ -538,11 +487,7 @@ async function playwget(webpage: any): Promise<any> {
             url: webpage.url,
           },
         ];
-        let fss = await saveFullscreenshot(
-          pngData,
-          tag,
-          screenshotsCollector,
-        );
+        let fss = await saveFullscreenshot(pngData, tag, screenshotsCollector);
         if (fss) {
           ssobj.full = fss;
         }
@@ -576,11 +521,7 @@ async function playwget(webpage: any): Promise<any> {
     Object.entries(wsObj).forEach(([key, value]: any) => {
       if (res.interceptionId == key) {
         console.log(key, value);
-        res.text = JSON.stringify(
-          value['messages'],
-          null,
-          2,
-        );
+        res.text = JSON.stringify(value['messages'], null, 2);
       }
     });
     //console.log(res);
@@ -600,8 +541,7 @@ async function playwget(webpage: any): Promise<any> {
   if (matchingResponse) {
     webpage.status = matchingResponse.status;
     webpage.remoteAddress = matchingResponse.remoteAddress;
-    webpage.securityDetails =
-      matchingResponse.securityDetails;
+    webpage.securityDetails = matchingResponse.securityDetails;
     webpage.headers = matchingResponse.headers;
     logger.info(
       `[${pageId}] Set status (${webpage.status}) and metadata from matching response`,

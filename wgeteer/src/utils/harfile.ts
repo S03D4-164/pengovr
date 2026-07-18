@@ -27,7 +27,7 @@ async function saveHarfile(
   pageId: any,
 ): Promise<string | undefined> {
   const buf = fs.readFileSync(harfile);
-  const HAR_SIZE_LIMIT = 16 * 1024 * 1024; // 16MB
+  const HAR_SIZE_LIMIT = 10 * 1024 * 1024; // 10MB
 
   if (buf.length > HAR_SIZE_LIMIT) {
     logger.warn(

@@ -5,10 +5,15 @@ import { uploadBuffer } from './s3.js';
 async function savePayload(
   responseBuffer: Buffer,
   payloadsCollector?: Array<any>,
-  yaraData?: { rules: Array<{ id: string; tags: string[]; meta: Record<string, any> }> },
+  yaraData?: {
+    rules: Array<{ id: string; tags: string[]; meta: Record<string, any> }>;
+  },
 ): Promise<string | undefined> {
   try {
-    const md5Hash = crypto.createHash('md5').update(responseBuffer).digest('hex');
+    const md5Hash = crypto
+      .createHash('md5')
+      .update(responseBuffer)
+      .digest('hex');
     const generatedId = crypto.randomBytes(12).toString('hex');
     const s3Key = `payloads/${md5Hash}`;
 

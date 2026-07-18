@@ -67,10 +67,12 @@ async function startServer() {
     await mongoose.connect(config.mongoUri, mongooseOptions);
     console.log('MongoDB connection established');
 
-    // S3接続確認と初期化（バケットを空にする）
-    console.log('Initializing S3 connection and emptying bucket...');
-    await initializeAndEmptyBucket();
-    console.log('S3 initialization completed successfully');
+    if (config.s3.clearBucket === 'true') {
+      // S3接続確認と初期化（バケットを空にする）
+      console.log('Initializing S3 connection and emptying bucket...');
+      await initializeAndEmptyBucket();
+      console.log('S3 initialization completed successfully');
+    }
 
     // Wait for 'open' event to ensure connection is fully ready
     if (mongoose.connection.readyState !== 1) {
@@ -92,7 +94,10 @@ async function startServer() {
       });
     }
 
-    console.log('MongoDB is ready for operations, readyState:', mongoose.connection.readyState);
+    console.log(
+      'MongoDB is ready for operations, readyState:',
+      mongoose.connection.readyState,
+    );
 
     // Start server
     app.listen(PORT, () => {
@@ -183,6 +188,7 @@ redis.once('ready', () => {
     try {
       await scrapingQueue.obliterate({ force: true });
       await enrichmentQueue.obliterate({ force: true });
+      await schedulerQueue.obliterate({ force: true });
       console.log('[BullMQ] Queues cleared successfully via obliterate.');
     } catch (err) {
       console.error('[BullMQ] Failed to clear queues:', err);
