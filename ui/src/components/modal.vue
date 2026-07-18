@@ -13,7 +13,7 @@
           &times;
         </button>
       </div>
-      <div class="p-4 overflow-auto max-h-[75vh] space-y-4">
+      <div class="p-4 overflow-auto max-h-[90vh] space-y-4">
         <div class="form-control w-full">
           <textarea
             v-model="urlsText"
@@ -199,8 +199,7 @@ const handlePaste = (e: ClipboardEvent) => {
 const submitUrls = () => {
   const formData = {
     urlsText: urlsText.value,
-    //track: track.value,
-    ...scrapingOptions.value,
+    options: scrapingOptions.value,
   };
 
   loading.value = true;

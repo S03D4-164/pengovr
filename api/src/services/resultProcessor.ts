@@ -116,7 +116,7 @@ export function initResultListeners(
         console.log(
           `[ResultProcessor] MongoDB: Updating Webpage ${targetWebpageId} with results from ${job.name}...`,
         );
-        await WebpageModel.findByIdAndUpdate(targetWebpageId, {
+        const webpage = await WebpageModel.findByIdAndUpdate(targetWebpageId, {
           $set: updateFields,
         });
 
@@ -174,14 +174,15 @@ export function initResultListeners(
         );
 
         // 解析ワーカーが作成した一時的な結果ファイルを削除
-        await s3Client.send(
-          new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }),
-        );
-
+        if (!webpage.option?.keeps3) {
+          await s3Client.send(
+            new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }),
+          );
+        }
         return;
       }
     } else if (job.name === 'enrichment_finalizer') {
-      console.log(job);
+      console.log(job.data);
       // すべての子ジョブ (yara, wappalyzer, dns) が成功した後にここが実行される
       if (job.data.resultKey) {
         console.log(
@@ -247,7 +248,7 @@ export function initResultListeners(
             );
             const savedHar = await harDoc.save();
 
-            await WebpageModel.findByIdAndUpdate(webpageId, {
+            const webpage = await WebpageModel.findByIdAndUpdate(webpageId, {
               $set: { harfile: savedHar._id },
             });
             console.log(
@@ -255,9 +256,14 @@ export function initResultListeners(
             );
 
             // DB保存完了後、S3の一時ファイル（ZIP）を削除
-            await s3Client.send(
-              new DeleteObjectCommand({ Bucket: config.s3.bucket, Key: s3Key }),
-            );
+            if (!webpage.option?.keeps3) {
+              await s3Client.send(
+                new DeleteObjectCommand({
+                  Bucket: config.s3.bucket,
+                  Key: s3Key,
+                }),
+              );
+            }
           }
         } catch (err: any) {
           console.error(

@@ -1,7 +1,7 @@
 import playwget from './utils/playwget.js';
 import { saveHarfile } from './utils/harfile.js';
 import { uploadJSONGzip } from './utils/s3.js';
-import crypto from 'crypto';
+//import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
@@ -27,61 +27,12 @@ class Scraper {
       `[Scraper] Starting scrape with options:`,
       JSON.stringify(options),
     );
-    /*
-
-    // APIから渡された既存のIDがある場合はそれを使用し、なければ新規生成する
-    const webpageId =
-      options.existingWebpageId || crypto.randomBytes(12).toString('hex');
-
-    const websiteId =
-      options.websiteId || crypto.randomBytes(12).toString('hex');
-
-    // Prepare virtual Website object
-    const website: any = {
-      _id: websiteId as any,
-      url,
-      track: {
-        period: options.period || 1,
-        counter: options.counter || 0,
-        option: {
-          userAgent: options.userAgent,
-          referer: options.referrer,
-          timeout: options.timeout || 30,
-          delay: options.delay || 5,
-          lang: options.language,
-          disableScript: options.disableScript,
-          proxy: options.proxy,
-          actions: options.actions,
-          exHeaders: options.extraHeaders,
-        },
-      },
-      last: webpageId as any,
-    };
-    */
 
     // Prepare virtual Webpage object
     const webpage: any = {
       _id: webpageId,
       input: url,
       option: options,
-      /*
-      {
-        userAgent: options.userAgent,
-        referer: options.referrer,
-        timeout: options.timeout || 30,
-        delay: options.delay || 5,
-        lang: options.language,
-        disableScript: options.disableScript,
-        proxy: options.proxy,
-        actions: options.actions,
-        exHeaders: options.extraHeaders,
-        noenrich: options.noenrich,
-        recordHar: options.recordHar,
-        scrot: options.scrot,
-      },
-      favicon: [],
-      screenshots: [],
-      */
     };
 
     // Execute playwget

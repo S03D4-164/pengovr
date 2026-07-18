@@ -83,6 +83,13 @@ yarasRouter.post('/', async (req: any, res: any) => {
         .json({ error: 'Rule with this name already exists' });
     }
 
+    const total = await YaraModel.countDocuments();
+    if (total >= 1000) {
+      return res
+        .status(400)
+        .json({ error: 'Cannot create more than 1,000 Rules' });
+    }
+
     const yaraRule = new YaraModel({
       name,
       rule,

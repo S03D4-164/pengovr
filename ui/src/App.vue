@@ -184,7 +184,7 @@ const handleModalSubmit = async (payload: {
     for (const url of rawUrls) {
       try {
         console.log(`Creating task for URL: ${url}`);
-        const response = await taskApi.createTask(url, formData);
+        const response = await taskApi.createTask(url, formData.options);
         console.log(`Task creation response for ${url}:`, response);
         if (response?.webpageId) {
           console.log(`Adding webpageId to store: ${response.webpageId}`);

@@ -33,7 +33,10 @@ export const initYara = async () => {
       return yaraModule;
     }
   } catch (err) {
-    console.warn('YARA-X WASM failed to initialize, will use API fallback:', err);
+    console.warn(
+      'YARA-X WASM failed to initialize, will use API fallback:',
+      err,
+    );
   }
   return null;
 };
@@ -57,7 +60,6 @@ export const validateRule = async (ruleString: string) => {
 
 /**
  * Scan content with YARA rules.
- * Tries local WASM scan first, falls back to API scan if WASM is unavailable or fails.
  */
 export const scanContent = async (content: string | Uint8Array) => {
   try {
@@ -67,13 +69,16 @@ export const scanContent = async (content: string | Uint8Array) => {
       // Fetch active rules from API (limit 1000 for scanning)
       const rulesData = await yaraApi.getYaraRules(1, 1000);
       const ruleStrings = rulesData.results.map((r: any) => r.rule).join('\n');
-
+      console.log(ruleStrings);
       if (ruleStrings.trim()) {
         const compiler = new module.Compiler();
         compiler.addSource(ruleStrings);
         const compiledRules = compiler.build();
 
-        const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
+        const bytes =
+          typeof content === 'string'
+            ? new TextEncoder().encode(content)
+            : content;
         const scanResult = compiledRules.scan(bytes);
 
         if (scanResult.valid) {
@@ -90,8 +95,5 @@ export const scanContent = async (content: string | Uint8Array) => {
     throw err;
   }
 
-  // Fallback to API scan
-  const apiContent = typeof content === 'string' ? content : new TextDecoder().decode(content);
-  const response = await yaraApi.scan(apiContent);
-  return response.results;
+  return;
 };

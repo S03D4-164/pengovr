@@ -80,15 +80,11 @@ export const taskApi = {
   createTask: (url: string, options?: any) =>
     api.post<{
       message: string;
-      //taskId: string;
       webpageId: string;
-      //task: Task;
     }>('/tasks', {
       url,
       options,
     }),
-  //getTasks: () => api.get<{ results: Task[] }>('/tasks'),
-  //getTask: (id: string) => api.get<TaskDetailResponse>(`/tasks/${id}`),
 };
 
 export const responseApi = {
@@ -216,8 +212,6 @@ export const yaraApi = {
     valid?: boolean,
   ) => api.put(`/yaras/${id}`, { name, rule, actions, valid }),
   deleteYaraRule: (id: string) => api.delete(`/yaras/${id}`),
-  scan: (content: string) =>
-    api.post<{ results: any[] }>('/yaras/scan', { content }),
 };
 
 export const healthApi = {
