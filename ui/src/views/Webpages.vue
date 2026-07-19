@@ -2,6 +2,11 @@
   <div class="container mx-auto max-w-[1280px] p-4">
     <h1 class="text-3xl font-bold mb-6">Webpages</h1>
 
+    <!-- Filter Message -->
+    <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
+      {{ filterMessage }}
+    </div>
+
     <!-- Fixed Navigation -->
     <FixedNav />
 
@@ -14,9 +19,19 @@
             placeholder="Search URL or title..."
             class="input input-bordered input-sm flex-1"
           />
-          <input v-model="startDate" type="date" class="input input-bordered input-sm w-36" />
-          <input v-model="endDate" type="date" class="input input-bordered input-sm w-36" />
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
+          <input
+            v-model="startDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
+          <input
+            v-model="endDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
           <button
             @click="clearSearch"
             v-if="searchQuery || startDate || endDate"
@@ -29,9 +44,13 @@
     </div>
 
     <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="data.docs.length > 0">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="data.docs.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ data.totalDocs }} webpages | Page {{ data.page }} of {{ data.totalPages }}
+          Total: {{ data.totalDocs }} webpages | Page {{ data.page }} of
+          {{ data.totalPages }}
         </div>
         <div class="join">
           <button
@@ -45,7 +64,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -70,11 +92,18 @@
           </select>
         </div>
       </div>
-      <WebpageTable :webpages="data.docs" @show-screenshot="showFullScreenshot" />
+      <WebpageTable
+        :webpages="data.docs"
+        @show-screenshot="showFullScreenshot"
+      />
     </div>
 
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="modalScreenshotId" @close="closeModal" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="modalScreenshotId"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -113,6 +142,9 @@ export default {
       showModal: false,
       modalScreenshotId: null,
       modalWebpage: null,
+      payloadId: '',
+      yaraRuleId: '',
+      filterMessage: '',
     };
   },
   computed: {
@@ -133,6 +165,21 @@ export default {
     },
   },
   async created() {
+    // Check for payloadId query parameter
+    if (this.$route.query.payloadId) {
+      this.payloadId = this.$route.query.payloadId;
+      this.filterMessage = `Filtering webpages containing payload: ${this.payloadId}`;
+      this.searchQuery = this.payloadId;
+    }
+    // Check for yaraRuleId query parameter
+    if (this.$route.query.yaraRuleId) {
+      this.yaraRuleId = this.$route.query.yaraRuleId;
+      if (this.filterMessage) {
+        this.filterMessage += ` and YARA rule: ${this.yaraRuleId}`;
+      } else {
+        this.filterMessage = `Filtering webpages matching YARA rule: ${this.yaraRuleId}`;
+      }
+    }
     await this.fetchWebpages();
   },
   methods: {
@@ -145,6 +192,8 @@ export default {
           this.searchQuery,
           this.startDate,
           this.endDate,
+          this.payloadId, // Add payloadId parameter
+          this.yaraRuleId, // Add yaraRuleId parameter
         );
         this.data = response;
       } catch (error) {
@@ -176,7 +225,8 @@ export default {
     getRelativeTime,
     getStatusClass(status) {
       const base = 'badge badge-md font-bold ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';
@@ -186,7 +236,10 @@ export default {
       return formatImageUrl(thumbnail);
     },
     showFullScreenshot(webpage) {
-      console.log('[Webpages] Clicked thumbnail. Full webpage object:', webpage);
+      console.log(
+        '[Webpages] Clicked thumbnail. Full webpage object:',
+        webpage,
+      );
       // フィールド名の揺れを確認する代わりに、実用的なフォールバックを適用
       const screenshotId =
         webpage?.screenshot ||

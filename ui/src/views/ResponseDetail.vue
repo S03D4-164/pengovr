@@ -7,7 +7,11 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Request Information -->
-      <div id="request-info" class="card bg-base-100 shadow-sm card-bordered" v-if="request">
+      <div
+        id="request-info"
+        class="card bg-base-100 shadow-sm card-bordered"
+        v-if="request"
+      >
         <div class="card-body p-4">
           <h2 class="card-title text-base opacity-70">Request Information</h2>
           <div class="overflow-x-auto">
@@ -30,7 +34,9 @@
                 <tr>
                   <th class="opacity-60">Method</th>
                   <td>
-                    <span class="badge badge-ghost font-bold">{{ request.method }}</span>
+                    <span class="badge badge-ghost font-bold">{{
+                      request.method
+                    }}</span>
                   </td>
                 </tr>
                 <tr>
@@ -43,7 +49,9 @@
                 </tr>
                 <tr v-if="request.interceptionId">
                   <th class="opacity-60">Interception ID</th>
-                  <td class="font-mono text-sm opacity-70">{{ request.interceptionId }}</td>
+                  <td class="font-mono text-sm opacity-70">
+                    {{ request.interceptionId }}
+                  </td>
                 </tr>
                 <tr v-if="request.webpage">
                   <th class="opacity-60">Webpage</th>
@@ -70,7 +78,9 @@
               <tbody>
                 <tr>
                   <th class="w-1/3 opacity-60">ID</th>
-                  <td class="font-mono text-sm opacity-70">{{ response._id }}</td>
+                  <td class="font-mono text-sm opacity-70">
+                    {{ response._id }}
+                  </td>
                 </tr>
                 <tr>
                   <th class="opacity-60">Raw JSON</th>
@@ -120,14 +130,16 @@
                 </tr>
                 <tr v-if="response.interceptionId">
                   <th class="opacity-60">Interception ID</th>
-                  <td class="font-mono text-sm opacity-70">{{ response.interceptionId }}</td>
+                  <td class="font-mono text-sm opacity-70">
+                    {{ response.interceptionId }}
+                  </td>
                 </tr>
                 <tr v-if="response.webpage">
                   <th class="opacity-60">Webpage</th>
                   <td>
                     <router-link
                       :to="`/webpages/${response.webpage._id}`"
-                      class="link link-secondary text-sm font-mono"
+                      class="link link-primary text-sm font-mono"
                       >{{ response.webpage._id }}</router-link
                     >
                   </td>
@@ -147,8 +159,10 @@
                   <td>
                     <router-link
                       :to="`/payloads/${response.payload._id || response.payload}`"
-                      class="badge badge-error badge-md text-white"
-                      >{{ response.payload._id || response.payload }}</router-link
+                      class="link link-primary text-sm font-mono"
+                      >{{
+                        response.payload._id || response.payload
+                      }}</router-link
                     >
                   </td>
                 </tr>
@@ -160,7 +174,10 @@
     </div>
 
     <!-- Headers Section -->
-    <div id="headers-section" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div
+      id="headers-section"
+      class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
+    >
       <div
         class="card bg-base-100 shadow-sm card-bordered"
         v-if="request?.headers && Object.keys(request.headers).length"
@@ -287,7 +304,8 @@ export default {
     },
     getStatusClass(status) {
       const base = 'badge badge-md font-bold ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';

@@ -8,7 +8,10 @@ const router: Router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] WEBPAGES_QUERY_REQUEST - IP: ${req.ip}, Params:`, req.query);
+    console.log(
+      `[${timestamp}] WEBPAGES_QUERY_REQUEST - IP: ${req.ip}, Params:`,
+      req.query,
+    );
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -72,6 +75,21 @@ router.get('/', async (req, res) => {
         }
       }
 
+      const payloadId = req.query.payloadId as string;
+      if (payloadId) {
+        // Filter by payloadId - check both single payload and payloads array
+        query.$or = [
+          { payload: payloadId },
+          { payloads: { $in: [payloadId] } },
+        ];
+      }
+
+      const yaraRuleId = req.query.yaraRuleId as string;
+      if (yaraRuleId) {
+        // Filter by YARA rule ID
+        query['yara.rules.id'] = { $regex: yaraRuleId, $options: 'i' };
+      }
+
       console.log(
         `[${timestamp}] WEBPAGES_FILTER_GENERAL - Final Mongo Query:`,
         JSON.stringify(query),
@@ -119,7 +137,9 @@ router.get('/', async (req, res) => {
     });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] WEBPAGES_QUERY_ERROR:`, error);
-    res.status(500).json({ error: 'Failed to fetch webpages', details: error.message });
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch webpages', details: error.message });
   }
 });
 
@@ -161,7 +181,9 @@ router.get('/:id', async (req, res) => {
       `[${timestamp}] WEBPAGE_DETAIL_ERROR - IP: ${clientIP}, ID: ${req.params.id}, ResponseTime: ${responseTime}ms, Error: ${error.message}`,
     );
     console.error('Error stack:', error.stack);
-    res.status(500).json({ error: 'Failed to fetch webpage', details: error.message });
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch webpage', details: error.message });
   }
 });
 
@@ -179,12 +201,17 @@ router.get('/:id/harfile', async (req, res) => {
     }
 
     if (!webpage.harfile) {
-      return res.status(404).json({ error: 'HAR file not found for this webpage' });
+      return res
+        .status(404)
+        .json({ error: 'HAR file not found for this webpage' });
     }
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${webpage._id}.har.zip"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${webpage._id}.har.zip"`,
+    );
 
     // webpage.harfile is already populated, so we can use it directly
     // The populated object is stored in 'harfile' property
@@ -193,7 +220,9 @@ router.get('/:id/harfile', async (req, res) => {
     res.send(harData);
   } catch (error: any) {
     console.error('Error downloading HAR file:', error);
-    res.status(500).json({ error: 'Failed to download HAR file', details: error.message });
+    res
+      .status(500)
+      .json({ error: 'Failed to download HAR file', details: error.message });
   }
 });
 

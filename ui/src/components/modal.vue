@@ -152,16 +152,6 @@ const fetchUserAgents = async () => {
 const message = ref('');
 const error = ref(false);
 
-const onLanguageChange = (e: Event) => {
-  console.log('Language change event triggered');
-  console.log('Current urlsText before change:', urlsText.value);
-  console.log('New language value:', (e.target as HTMLSelectElement).value);
-  // 少し遅延して確認
-  setTimeout(() => {
-    console.log('urlsText after change timeout:', urlsText.value);
-  }, 100);
-};
-
 const handlePaste = (e: ClipboardEvent) => {
   const clipboardData = e.clipboardData;
   if (!clipboardData) return;

@@ -16,6 +16,8 @@ router.get('/', async (req, res) => {
     const textRegex = (req.query.textRegex as string) || '';
     const ipRegex = (req.query.ipRegex as string) || '';
     const yaraRegex = (req.query.yaraRegex as string) || '';
+    const payloadId = (req.query.payloadId as string) || '';
+    const yaraRuleId = (req.query.yaraRuleId as string) || '';
 
     const query: any = {};
 
@@ -41,6 +43,15 @@ router.get('/', async (req, res) => {
 
     if (yaraRegex) {
       query['yara.rules.id'] = { $regex: yaraRegex, $options: 'i' };
+    }
+
+    if (payloadId) {
+      query.payload = payloadId;
+    }
+
+    if (yaraRuleId) {
+      // Filter by YARA rule ID
+      query['yara.rules.id'] = { $regex: yaraRuleId, $options: 'i' };
     }
 
     if (startDate || endDate) {

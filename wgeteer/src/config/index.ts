@@ -5,8 +5,8 @@ const config = {
     password: process.env.REDIS_PASSWORD || 'pengovr-password',
   },
   queueName: process.env.QUEUE_NAME || 'scraping-tasks',
-  pollInterval: parseInt(process.env.POLL_INTERVAL || '5000', 10),
-  usePlaywget: process.env.USE_PLAYWGET !== 'false',
+  //pollInterval: parseInt(process.env.POLL_INTERVAL || '5000', 10),
+  //usePlaywget: process.env.USE_PLAYWGET !== 'false',
   concurrency: parseInt(process.env.CONCURRENCY || '1', 10),
   s3: {
     endpoint: process.env.S3_ENDPOINT,

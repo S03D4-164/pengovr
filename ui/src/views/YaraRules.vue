@@ -7,8 +7,12 @@
         <div class="flex justify-between items-center mb-2">
           <h2 class="card-title text-sm opacity-70">Add New YARA Rule</h2>
           <div class="flex gap-2">
-            <button @click="handleExport" class="btn btn-sm btn-outline">Export JSON</button>
-            <button @click="triggerImport" class="btn btn-sm btn-outline">Import JSON</button>
+            <button @click="handleExport" class="btn btn-sm btn-outline">
+              Export JSON
+            </button>
+            <button @click="triggerImport" class="btn btn-sm btn-outline">
+              Import JSON
+            </button>
             <input
               type="file"
               ref="fileInput"
@@ -67,20 +71,32 @@ press&gt;#input&gt;Enter"
             placeholder="Search by name or rule content..."
             class="input input-bordered input-sm flex-1"
           />
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
-          <button @click="clearSearch" v-if="searchQuery" class="btn btn-ghost btn-sm">
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
+          <button
+            @click="clearSearch"
+            v-if="searchQuery"
+            class="btn btn-ghost btn-sm"
+          >
             Clear
           </button>
         </div>
       </div>
     </div>
 
-    <div v-if="error" class="alert alert-error mb-4 text-sm p-4 rounded shadow-sm">
+    <div
+      v-if="error"
+      class="alert alert-error mb-4 text-sm p-4 rounded shadow-sm"
+    >
       <pre class="whitespace-pre-wrap font-mono">{{ error }}</pre>
     </div>
 
     <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="yaraRules.length > 0">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="yaraRules.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
           Total: {{ total }} rules | Page {{ currentPage }} of {{ totalPages }}
         </div>
@@ -96,7 +112,10 @@ press&gt;#input&gt;Enter"
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -133,34 +152,77 @@ press&gt;#input&gt;Enter"
         <tbody>
           <tr v-for="rule in yaraRules" :key="rule._id">
             <td class="col-date">
-              <div class="text-sm opacity-60 mb-2">{{ formatDate(rule.createdAt) }}</div>
+              <div class="text-sm opacity-60 mb-2">
+                {{ formatDate(rule.createdAt) }}
+              </div>
               <template v-if="editingRule?._id === rule._id">
                 <label class="label cursor-pointer justify-start gap-2 mb-2">
-                  <input type="checkbox" v-model="editingRule.valid" class="checkbox checkbox-md" />
+                  <input
+                    type="checkbox"
+                    v-model="editingRule.valid"
+                    class="checkbox checkbox-md"
+                  />
                   <span class="label-text">Valid</span>
                 </label>
               </template>
               <template v-else>
                 <div
                   class="badge badge-md mb-4"
-                  :class="rule.valid ? 'badge-success' : 'badge-error text-white'"
+                  :class="
+                    rule.valid ? 'badge-success' : 'badge-error text-white'
+                  "
                 >
                   {{ rule.valid ? 'Valid' : 'Invalid' }}
                 </div>
               </template>
 
-              <div class="flex flex-col gap-2">
+              <div class="flex flex-row flex-wrap gap-2">
                 <template v-if="editingRule?._id === rule._id">
-                  <button @click="handleUpdate" class="btn btn-primary btn-sm" :disabled="saving">
+                  <button
+                    @click="handleUpdate"
+                    class="btn btn-primary btn-sm"
+                    :disabled="saving"
+                  >
                     {{ saving ? 'Saving...' : 'Save' }}
                   </button>
-                  <button @click="cancelEdit" class="btn btn-ghost btn-sm">Cancel</button>
+                  <button @click="cancelEdit" class="btn btn-ghost btn-sm">
+                    Cancel
+                  </button>
                 </template>
                 <template v-else>
-                  <button @click="startEdit(rule)" class="btn btn-primary btn-sm">Edit</button>
-                  <button @click="deleteRule(rule._id)" class="btn btn-error btn-sm text-white">
+                  <button
+                    @click="startEdit(rule)"
+                    class="btn btn-primary btn-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    @click="deleteRule(rule._id)"
+                    class="btn btn-error btn-sm text-white"
+                  >
                     Delete
                   </button>
+                  <div class="flex flex-row gap-1 items-center">
+                    <span class="text-lg">🔍</span>
+                    <router-link
+                      :to="{
+                        path: '/webpages',
+                        query: { yaraRuleId: rule.name },
+                      }"
+                      class="btn btn-info btn-sm text-white"
+                    >
+                      Webpages
+                    </router-link>
+                    <router-link
+                      :to="{
+                        path: '/responses',
+                        query: { yaraRuleId: rule.name },
+                      }"
+                      class="btn btn-info btn-sm text-white"
+                    >
+                      Responses
+                    </router-link>
+                  </div>
                 </template>
               </div>
             </td>
@@ -224,7 +286,11 @@ import { ref, onMounted, computed } from 'vue';
 import { yaraApi } from '../api';
 import { formatDate } from '../utils/date-utils';
 import { validateRule } from '../utils/yara-utils';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 const yaraRules = ref([]);
 const loading = ref(true);
@@ -365,16 +431,45 @@ const truncateRule = (rule) => {
 
 const handleExport = async () => {
   try {
-    // Fetch all for export (using a large limit)
-    const response = await yaraApi.getYaraRules(1, 1000);
-    const dataToExport = response.results.map(({ name, rule, actions, valid }) => ({
-      name,
-      rule,
-      actions,
-      valid,
-    }));
+    error.value = '';
+    const dataToExport = [];
+    let page = 1;
+    let hasMore = true;
+    const limitPerPage = 100;
 
-    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    // Show loading indicator
+    const originalButtonText = 'Export JSON';
+    error.value = 'Exporting... please wait';
+
+    while (hasMore) {
+      const response = await yaraApi.getYaraRules(page, limitPerPage);
+      const mappedRules = response.results.map(
+        ({ name, rule, actions, valid }) => ({
+          name,
+          rule,
+          actions,
+          valid,
+        }),
+      );
+
+      dataToExport.push(...mappedRules);
+
+      // Check if there are more pages
+      if (page >= response.totalPages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+
+      // Update progress
+      error.value = `Exporting... ${dataToExport.length} rules loaded`;
+    }
+
+    error.value = '';
+
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -411,7 +506,12 @@ const handleImport = async (event) => {
       for (const item of importedData) {
         if (item.name && item.rule) {
           try {
-            await yaraApi.createYaraRule(item.name, item.rule, item.actions, item.valid);
+            await yaraApi.createYaraRule(
+              item.name,
+              item.rule,
+              item.actions,
+              item.valid,
+            );
             successCount++;
           } catch (err) {
             // 既存のルール名エラーの場合はスキップ

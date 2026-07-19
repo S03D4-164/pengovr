@@ -39,7 +39,9 @@
                 <tr v-if="payload.fileType">
                   <th class="opacity-50">Type</th>
                   <td>
-                    <span class="badge badge-ghost badge-sm">{{ payload.fileType }}</span>
+                    <span class="badge badge-ghost badge-sm">{{
+                      payload.fileType
+                    }}</span>
                   </td>
                 </tr>
                 <tr>
@@ -50,7 +52,10 @@
             </table>
           </div>
           <div class="card-actions justify-end mt-4 gap-2">
-            <button @click="downloadPayload" class="btn btn-error btn-sm text-white">
+            <button
+              @click="downloadPayload"
+              class="btn btn-error btn-sm text-white"
+            >
               Download (PW: infected)
             </button>
           </div>
@@ -63,7 +68,11 @@
           <div class="card-body">
             <div class="flex items-center justify-between mb-4">
               <h2 class="card-title text-sm opacity-70">Analysis & Tags</h2>
-              <button @click="handleYaraScan" class="btn btn-accent btn-sm" :disabled="isScanning">
+              <button
+                @click="handleYaraScan"
+                class="btn btn-accent btn-sm"
+                :disabled="isScanning"
+              >
                 {{ isScanning ? 'Scanning...' : 'YARA Scan' }}
               </button>
             </div>
@@ -72,7 +81,10 @@
               {{ yaraError }}
             </div>
 
-            <div v-if="payload.yara?.rules?.length" class="flex flex-wrap gap-1 mb-4">
+            <div
+              v-if="payload.yara?.rules?.length"
+              class="flex flex-wrap gap-1 mb-4"
+            >
               <span
                 v-for="rule in payload.yara.rules"
                 :key="rule.id"
@@ -83,8 +95,13 @@
             </div>
 
             <div v-if="yaraResults" class="mt-4 pt-4 border-t border-base-200">
-              <h3 class="text-sm font-bold opacity-50 uppercase mb-2">Manual Scan Results</h3>
-              <div v-if="yaraResults.length === 0" class="text-sm italic opacity-50">
+              <h3 class="text-sm font-bold opacity-50 uppercase mb-2">
+                Manual Scan Results
+              </h3>
+              <div
+                v-if="yaraResults.length === 0"
+                class="text-sm italic opacity-50"
+              >
                 No matches found.
               </div>
               <div v-else class="flex flex-wrap gap-1">
@@ -117,12 +134,20 @@
           <div class="card-body">
             <div class="flex items-center justify-between mb-4">
               <h2 class="card-title text-sm opacity-70">QR Code Decoder</h2>
-              <button @click="handleDecodeQr" class="btn btn-primary btn-sm">Decode Image</button>
+              <button @click="handleDecodeQr" class="btn btn-primary btn-sm">
+                Decode Image
+              </button>
             </div>
-            <div v-if="qrCodeError" class="alert alert-warning text-sm py-2 mb-4">
+            <div
+              v-if="qrCodeError"
+              class="alert alert-warning text-sm py-2 mb-4"
+            >
               {{ qrCodeError }}
             </div>
-            <div v-if="qrCodeData" class="mockup-code before:hidden px-4 py-2 text-sm bg-base-200">
+            <div
+              v-if="qrCodeData"
+              class="mockup-code before:hidden px-4 py-2 text-sm bg-base-200"
+            >
               <pre><code>Result: {{ qrCodeData.data }}</code></pre>
               <pre><code>Version: {{ qrCodeData.version }}</code></pre>
             </div>
@@ -133,7 +158,10 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
       <!-- Hex Dump Section -->
-      <div class="lg:col-span-3 card bg-base-100 shadow-sm card-bordered" v-if="payload.payload">
+      <div
+        class="lg:col-span-3 card bg-base-100 shadow-sm card-bordered"
+        v-if="payload.payload"
+      >
         <div class="card-body">
           <div class="flex items-center justify-between mb-4">
             <h2 class="card-title text-sm opacity-70">
@@ -179,8 +207,22 @@
       </div>
     </div>
 
-    <div class="flex justify-end mb-10">
-      <router-link :to="'/remove/payload/' + id" class="btn btn-error btn-sm text-white"
+    <div class="flex justify-end gap-2 mb-10">
+      <router-link
+        :to="{ path: '/webpages', query: { payloadId: id } }"
+        class="btn btn-info btn-sm text-white"
+      >
+        View Related Webpages
+      </router-link>
+      <router-link
+        :to="{ path: '/responses', query: { payloadId: id } }"
+        class="btn btn-info btn-sm text-white"
+      >
+        View Related Responses
+      </router-link>
+      <router-link
+        :to="'/remove/payload/' + id"
+        class="btn btn-error btn-sm text-white"
         >Delete Data</router-link
       >
     </div>
@@ -263,7 +305,11 @@ export default {
         await new Promise((resolve, reject) => {
           image.onload = resolve;
           image.onerror = reject;
-          image.src = 'data:' + (payload.value.fileType || 'image/png') + ';base64,' + base64Data;
+          image.src =
+            'data:' +
+            (payload.value.fileType || 'image/png') +
+            ';base64,' +
+            base64Data;
         });
 
         const canvas = document.createElement('canvas');
@@ -337,7 +383,9 @@ export default {
       try {
         const binaryString = atob(base64String);
         const bytes = new Uint8Array(
-          showFullHex.value ? binaryString.length : Math.min(binaryString.length, maxBytes),
+          showFullHex.value
+            ? binaryString.length
+            : Math.min(binaryString.length, maxBytes),
         );
         for (let i = 0; i < bytes.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
@@ -347,7 +395,9 @@ export default {
         for (let i = 0; i < bytes.length; i += 16) {
           const chunk = bytes.slice(i, i + 16);
           const offset = i.toString(16).padStart(8, '0');
-          const hexBytes = Array.from(chunk).map((b) => b.toString(16).padStart(2, '0'));
+          const hexBytes = Array.from(chunk).map((b) =>
+            b.toString(16).padStart(2, '0'),
+          );
           const hexPairs = [];
           for (let j = 0; j < hexBytes.length; j += 2) {
             hexPairs.push(hexBytes[j] + (hexBytes[j + 1] || ''));
@@ -380,10 +430,13 @@ export default {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        const zipWriter = new zip.ZipWriter(new zip.BlobWriter('application/zip'), {
-          password: 'infected',
-          encryptionStrength: 3,
-        });
+        const zipWriter = new zip.ZipWriter(
+          new zip.BlobWriter('application/zip'),
+          {
+            password: 'infected',
+            encryptionStrength: 3,
+          },
+        );
 
         const fileName = `payload_${payload.value._id || 'download'}`;
         await zipWriter.add(fileName, new zip.BlobReader(new Blob([bytes])));

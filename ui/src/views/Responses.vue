@@ -2,6 +2,11 @@
   <div class="container mx-auto max-w-[1280px] p-4">
     <h1 class="text-3xl font-bold mb-6">Responses</h1>
 
+    <!-- Filter Message -->
+    <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
+      {{ filterMessage }}
+    </div>
+
     <!-- Fixed Navigation -->
     <FixedNav />
 
@@ -9,7 +14,9 @@
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">URL Regex</span></label>
+            <label class="label p-1"
+              ><span class="label-text text-sm">URL Regex</span></label
+            >
             <input
               v-model="urlRegex"
               @keyup.enter="handleSearch"
@@ -18,7 +25,9 @@
             />
           </div>
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">Text Regex</span></label>
+            <label class="label p-1"
+              ><span class="label-text text-sm">Text Regex</span></label
+            >
             <input
               v-model="textRegex"
               @keyup.enter="handleSearch"
@@ -27,7 +36,9 @@
             />
           </div>
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">IP Regex</span></label>
+            <label class="label p-1"
+              ><span class="label-text text-sm">IP Regex</span></label
+            >
             <input
               v-model="ipRegex"
               @keyup.enter="handleSearch"
@@ -36,7 +47,9 @@
             />
           </div>
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">YARA Regex</span></label>
+            <label class="label p-1"
+              ><span class="label-text text-sm">YARA Regex</span></label
+            >
             <input
               v-model="yaraRegex"
               @keyup.enter="handleSearch"
@@ -45,14 +58,28 @@
             />
           </div>
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">Start</span></label>
-            <input v-model="startDate" type="date" class="input input-bordered input-sm w-36" />
+            <label class="label p-1"
+              ><span class="label-text text-sm">Start</span></label
+            >
+            <input
+              v-model="startDate"
+              type="date"
+              class="input input-bordered input-sm w-36"
+            />
           </div>
           <div class="form-control">
-            <label class="label p-1"><span class="label-text text-sm">End</span></label>
-            <input v-model="endDate" type="date" class="input input-bordered input-sm w-36" />
+            <label class="label p-1"
+              ><span class="label-text text-sm">End</span></label
+            >
+            <input
+              v-model="endDate"
+              type="date"
+              class="input input-bordered input-sm w-36"
+            />
           </div>
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
           <button
             @click="downloadCsv"
             class="btn btn-accent btn-sm"
@@ -62,7 +89,14 @@
           </button>
           <button
             @click="clearSearch"
-            v-if="startDate || endDate || urlRegex || textRegex || ipRegex || yaraRegex"
+            v-if="
+              startDate ||
+              endDate ||
+              urlRegex ||
+              textRegex ||
+              ipRegex ||
+              yaraRegex
+            "
             class="btn btn-ghost btn-sm"
           >
             Clear
@@ -72,9 +106,13 @@
     </div>
 
     <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="data.docs.length > 0">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="data.docs.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ data.totalDocs }} responses | Page {{ data.page }} of {{ data.totalPages }}
+          Total: {{ data.totalDocs }} responses | Page {{ data.page }} of
+          {{ data.totalPages }}
         </div>
         <div class="join">
           <button
@@ -88,7 +126,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -133,7 +174,10 @@
                   class="link link-primary text-sm font-mono"
                   >{{ response._id }}</router-link
                 >
-                <div class="text-sm font-medium break-all" :title="response.url">
+                <div
+                  class="text-sm font-medium break-all"
+                  :title="response.url"
+                >
                   {{ displayUrl(response.url) }}
                 </div>
                 <div class="flex items-center gap-2 text-sm">
@@ -150,7 +194,10 @@
                     </span>
                   </span>
                 </div>
-                <div v-if="response.yara?.rules?.length" class="flex flex-wrap gap-1">
+                <div
+                  v-if="response.yara?.rules?.length"
+                  class="flex flex-wrap gap-1"
+                >
                   <span
                     v-for="rule in response.yara.rules"
                     :key="rule.id"
@@ -168,7 +215,10 @@
                   class="link link-secondary text-sm font-mono"
                   >{{ response.webpage._id }}</router-link
                 >
-                <div class="text-sm opacity-70 break-all" :title="response.webpage.url">
+                <div
+                  class="text-sm opacity-70 break-all"
+                  :title="response.webpage.url"
+                >
                   {{ displayUrl(response.webpage.url) }}
                 </div>
                 <router-link
@@ -179,7 +229,9 @@
                   Payload
                 </router-link>
               </div>
-              <div v-else class="text-xs opacity-30 italic">No associated webpage</div>
+              <div v-else class="text-xs opacity-30 italic">
+                No associated webpage
+              </div>
             </td>
           </tr>
         </tbody>
@@ -195,7 +247,11 @@ import { formatDate } from '../utils/date-utils';
 import { scrollToSection } from '../utils/scroll-utils';
 import { downloadBlob } from '../utils/file-utils';
 import { displayUrl } from '../utils/url-utils';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 export default {
   name: 'Responses',
@@ -219,6 +275,9 @@ export default {
       textRegex: '',
       ipRegex: '',
       yaraRegex: '',
+      payloadId: '',
+      yaraRuleId: '',
+      filterMessage: '',
     };
   },
   computed: {
@@ -227,6 +286,20 @@ export default {
     },
   },
   async created() {
+    // Check for payloadId query parameter
+    if (this.$route.query.payloadId) {
+      this.payloadId = this.$route.query.payloadId;
+      this.filterMessage = `Filtering responses for payload: ${this.payloadId}`;
+    }
+    // Check for yaraRuleId query parameter
+    if (this.$route.query.yaraRuleId) {
+      this.yaraRuleId = this.$route.query.yaraRuleId;
+      if (this.filterMessage) {
+        this.filterMessage += ` and YARA rule: ${this.yaraRuleId}`;
+      } else {
+        this.filterMessage = `Filtering responses matching YARA rule: ${this.yaraRuleId}`;
+      }
+    }
     await this.fetchResponses();
   },
   methods: {
@@ -244,6 +317,8 @@ export default {
           this.textRegex,
           this.ipRegex,
           this.yaraRegex,
+          this.payloadId, // Add payloadId parameter
+          this.yaraRuleId, // Add yaraRuleId parameter
         ];
         console.log('Fetching responses with arguments array:', args);
 
@@ -269,6 +344,8 @@ export default {
           this.textRegex,
           this.ipRegex,
           this.yaraRegex,
+          this.payloadId, // Add payloadId parameter
+          this.yaraRuleId, // Add yaraRuleId parameter
         );
         const docs = response.docs;
 
@@ -290,7 +367,10 @@ export default {
         ];
 
         const rows = docs.map((doc) => {
-          const bgp = doc.remoteAddress?.bgp?.map((b) => `AS${b.asn} ${b.name}`).join('; ') || '';
+          const bgp =
+            doc.remoteAddress?.bgp
+              ?.map((b) => `AS${b.asn} ${b.name}`)
+              .join('; ') || '';
           const yara = doc.yara?.rules?.map((r) => r.id).join('; ') || '';
           const country = doc.remoteAddress?.geoip?.[0]?.country || '';
 
@@ -307,9 +387,17 @@ export default {
           ].map((val) => `"${String(val).replace(/"/g, '""')}"`); // CSVのエスケープ処理
         });
 
-        const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        downloadBlob(blob, `responses_export_${new Date().toISOString().split('T')[0]}.csv`);
+        const csvContent = [
+          headers.join(','),
+          ...rows.map((r) => r.join(',')),
+        ].join('\n');
+        const blob = new Blob([csvContent], {
+          type: 'text/csv;charset=utf-8;',
+        });
+        downloadBlob(
+          blob,
+          `responses_export_${new Date().toISOString().split('T')[0]}.csv`,
+        );
       } catch (error) {
         console.error('Export failed:', error);
         alert('Export failed: ' + error.message);
@@ -347,7 +435,8 @@ export default {
     formatDate,
     getStatusClass(status) {
       const base = 'badge badge-md font-bold brightness-90 ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';

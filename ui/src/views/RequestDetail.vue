@@ -32,7 +32,9 @@
             <tr>
               <th class="opacity-60">Method</th>
               <td>
-                <span class="badge badge-ghost font-bold">{{ request.method }}</span>
+                <span class="badge badge-ghost font-bold">{{
+                  request.method
+                }}</span>
               </td>
             </tr>
             <tr v-if="request.postData">
@@ -58,14 +60,16 @@
             </tr>
             <tr v-if="request.interceptionId">
               <th class="opacity-60">Interception ID</th>
-              <td class="font-mono text-sm opacity-70">{{ request.interceptionId }}</td>
+              <td class="font-mono text-sm opacity-70">
+                {{ request.interceptionId }}
+              </td>
             </tr>
             <tr v-if="request.webpage">
               <th class="opacity-60">Webpage</th>
               <td>
                 <router-link
                   :to="`/webpages/${request.webpage._id}`"
-                  class="link link-secondary text-sm font-mono"
+                  class="link link-primary text-sm font-mono"
                 >
                   {{ request.webpage._id }}
                 </router-link>
@@ -84,7 +88,9 @@
             </tr>
             <tr v-if="request.failure?.errorText">
               <th class="opacity-60 text-error">Error</th>
-              <td class="text-error font-bold text-sm">{{ request.failure.errorText }}</td>
+              <td class="text-error font-bold text-sm">
+                {{ request.failure.errorText }}
+              </td>
             </tr>
             <tr v-if="request.failure?.reason">
               <th class="opacity-60">Failure Reason</th>
@@ -114,7 +120,10 @@
             <tr>
               <th class="opacity-60">Status</th>
               <td>
-                <span :class="getStatusClass(response.status)" class="badge badge-sm text-white">
+                <span
+                  :class="getStatusClass(response.status)"
+                  class="badge badge-sm text-white"
+                >
                   {{ response.status }} {{ response.statusText }}
                 </span>
               </td>
@@ -133,14 +142,16 @@
             </tr>
             <tr v-if="response.interceptionId">
               <th class="opacity-60">Interception ID</th>
-              <td class="font-mono text-sm opacity-70">{{ response.interceptionId }}</td>
+              <td class="font-mono text-sm opacity-70">
+                {{ response.interceptionId }}
+              </td>
             </tr>
             <tr v-if="response.webpage">
               <th class="opacity-60">Webpage</th>
               <td>
                 <router-link
                   :to="`/webpages/${response.webpage._id}`"
-                  class="link link-secondary text-sm font-mono"
+                  class="link link-primary text-sm font-mono"
                 >
                   {{ response.webpage._id }}
                 </router-link>
@@ -162,7 +173,7 @@
               <td>
                 <router-link
                   :to="`/payloads/${response.payload._id || response.payload}`"
-                  class="badge badge-error badge-sm text-white"
+                  class="link link-primary text-sm font-mono"
                 >
                   {{ response.payload._id || response.payload }}
                 </router-link>
@@ -188,7 +199,9 @@
 
         <InfoCard
           title="Response Headers"
-          v-if="response && response.headers && Object.keys(response.headers).length"
+          v-if="
+            response && response.headers && Object.keys(response.headers).length
+          "
         >
           <InfoTable zebra :compact="false">
             <tr v-for="(value, key) in response.headers" :key="key">
@@ -224,7 +237,11 @@
       <FixedNav
         :targets="[
           { id: 'top', label: '↑', btnClass: 'btn-primary' },
-          { id: 'body-section', label: 'BODY', btnClass: 'btn-outline text-sm' },
+          {
+            id: 'body-section',
+            label: 'BODY',
+            btnClass: 'btn-outline text-sm',
+          },
           { id: 'bottom', label: '↓', btnClass: 'btn-ghost' },
         ]"
       />
@@ -289,7 +306,8 @@ export default {
     getRelativeTime,
     getStatusClass(status) {
       const base = 'badge badge-md font-bold ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';

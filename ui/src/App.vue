@@ -121,18 +121,13 @@ const isDark = ref(false);
 
 onMounted(() => {
   const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'dark') {
-    isDark.value = true;
-    document.documentElement.setAttribute('data-theme', 'dark');
-  } else if (
-    !savedTheme &&
-    window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-  ) {
-    isDark.value = true;
-    document.documentElement.setAttribute('data-theme', 'dark');
-  } else {
+  if (savedTheme === 'light') {
+    isDark.value = false;
     document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    // Default to dark mode (includes savedTheme === 'dark' and no savedTheme)
+    isDark.value = true;
+    document.documentElement.setAttribute('data-theme', 'dark');
   }
 });
 

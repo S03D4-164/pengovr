@@ -98,8 +98,8 @@ const yaraScan = async (source: string): Promise<YaraScanResult | null> => {
 
     // Check if WebAssembly is available
     if (!wasmInitialized || !yaraModule) {
-      logger.debug('WebAssembly not available, using simple pattern matching fallback');
-      return simplePatternMatch(source);
+      logger.debug('WebAssembly not available');
+      return null;
     }
 
     const yararules = await getActiveRules();
@@ -116,8 +116,8 @@ const yaraScan = async (source: string): Promise<YaraScanResult | null> => {
     const Scanner = yaraModule.Scanner;
 
     if (!Compiler || !Scanner) {
-      logger.debug('YARA-X Compiler or Scanner not available, using fallback');
-      return simplePatternMatch(source);
+      logger.debug('YARA-X Compiler or Scanner not available');
+      return null;
     }
 
     // Check if rules have changed and recompile if needed
@@ -184,11 +184,13 @@ const yaraScan = async (source: string): Promise<YaraScanResult | null> => {
     return scanResult;
   } catch (error: any) {
     logger.error(`YARA scan failed: ${error.message}`);
-    logger.debug('Using simple pattern matching fallback');
-    return simplePatternMatch(source);
+    return null;
+    //logger.debug('Using simple pattern matching fallback');
+    //return simplePatternMatch(source);
   }
 };
 
+/*
 // Simple pattern matching fallback for when WebAssembly fails
 const simplePatternMatch = async (source: string): Promise<YaraScanResult | null> => {
   try {
@@ -216,6 +218,7 @@ const simplePatternMatch = async (source: string): Promise<YaraScanResult | null
     return null;
   }
 };
+*/
 
 export const yaraSource = async (html: string): Promise<any> => {
   const yaraResult = await yaraScan(html);

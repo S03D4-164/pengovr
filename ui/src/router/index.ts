@@ -21,7 +21,7 @@ import NotFound from '../views/NotFound.vue';
 const routes = [
   { path: '/', component: Websites },
   { path: '/tasks', component: Tasks },
-  { path: '/tasks/:id', component: TaskDetail, props: true },
+  //{ path: '/tasks/:id', component: TaskDetail, props: true },
   { path: '/websites', component: Websites },
   { path: '/websites/:id', component: WebsiteDetail, props: true },
   { path: '/webpages', component: Webpages },

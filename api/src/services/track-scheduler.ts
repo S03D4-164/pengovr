@@ -16,6 +16,7 @@ export const initTrackScheduler = async (
 ) => {
   const initTimestamp = new Date().toISOString();
   console.log(`[${initTimestamp}] Initializing Track Scheduler...`);
+  await schedulerQueue.obliterate({ force: true });
 
   // Remove existing repeatable jobs for this queue to avoid duplicates if the pattern changed.
   const repeatableJobs = await schedulerQueue.getRepeatableJobs();

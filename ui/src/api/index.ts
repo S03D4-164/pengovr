@@ -1,5 +1,3 @@
-import type { Task, TaskDetailResponse } from '../types';
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 class ApiClient {
@@ -98,6 +96,8 @@ export const responseApi = {
     textRegex = '',
     ipRegex = '',
     yaraRegex = '',
+    payloadId = '',
+    yaraRuleId = '',
   ) =>
     api.get<any>('/responses', {
       page: page.toString(),
@@ -109,6 +109,8 @@ export const responseApi = {
       textRegex,
       ipRegex,
       yaraRegex,
+      payloadId,
+      yaraRuleId,
     }),
   getResponse: (id: string) => api.get<any>(`/responses/${id}`),
   deleteResponse: (id: string) => api.delete(`/responses/${id}`),
@@ -133,6 +135,8 @@ export const webpageApi = {
     search = '',
     startDate = '',
     endDate = '',
+    payloadId = '',
+    yaraRuleId = '',
   ) =>
     api.get('/webpages', {
       page: page.toString(),
@@ -140,6 +144,8 @@ export const webpageApi = {
       search,
       startDate,
       endDate,
+      payloadId,
+      yaraRuleId,
     }),
   getWebpage: (id: string) => api.get(`/webpages/${id}`),
   getHarFile: (id: string) => api.get(`/webpages/${id}/harfile`),

@@ -188,7 +188,6 @@ redis.once('ready', () => {
     try {
       await scrapingQueue.obliterate({ force: true });
       await enrichmentQueue.obliterate({ force: true });
-      await schedulerQueue.obliterate({ force: true });
       console.log('[BullMQ] Queues cleared successfully via obliterate.');
     } catch (err) {
       console.error('[BullMQ] Failed to clear queues:', err);
