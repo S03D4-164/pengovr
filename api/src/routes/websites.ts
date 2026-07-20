@@ -260,7 +260,10 @@ router.post('/:id/gsb-lookup', async (req, res) => {
     console.log(
       `GSB lookup task queued for website ${website._id}: ${website.url}`,
     );
-    res.json({ message: 'GSB lookup task queued successfully' });
+    res.json({
+      message: 'GSB lookup task queued successfully',
+      taskId: gsbTaskId,
+    });
   } catch (error) {
     console.error('Error queuing GSB lookup:', error);
     res.status(500).json({ error: 'Failed to queue GSB lookup' });

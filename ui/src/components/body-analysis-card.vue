@@ -2,7 +2,9 @@
   <InfoCard :id="id" :title="`Response (${content?.length || 0} bytes)`">
     <template #actions>
       <div v-if="!showContent">
-        <button @click="loadContent" class="btn btn-primary btn-sm">Show Content</button>
+        <button @click="loadContent" class="btn btn-primary btn-sm">
+          Show Content
+        </button>
       </div>
       <div v-else class="flex gap-2 flex-wrap items-center">
         <div class="join">
@@ -11,7 +13,10 @@
             :key="type"
             @click="setFormat(type)"
             class="btn btn-sm join-item btn-outline uppercase"
-            :class="{ 'btn-active': formatType === type || (type === 'raw' && formatType === '') }"
+            :class="{
+              'btn-active':
+                formatType === type || (type === 'raw' && formatType === ''),
+            }"
           >
             {{ type }}
           </button>
@@ -38,31 +43,44 @@
           >
             {{ isScanning ? 'Scanning...' : 'YARA' }}
           </button>
-          <button @click="copyToClipboard" class="btn btn-sm btn-outline">Copy</button>
+          <button @click="copyToClipboard" class="btn btn-sm btn-outline">
+            Copy
+          </button>
         </div>
-        <span v-if="statusMessage" class="badge badge-info badge-sm">{{ statusMessage }}</span>
+        <span v-if="statusMessage" class="badge badge-info badge-sm">{{
+          statusMessage
+        }}</span>
       </div>
     </template>
 
     <!-- Analysis Panels -->
     <div
-      v-if="yaraResults || geminiExplanation || savedYara || payloads?.length"
+      v-if="
+        yaraResults ||
+        effectiveGeminiExplanation ||
+        savedYara ||
+        payloads?.length
+      "
       class="space-y-4 mb-4"
     >
       <!-- Gemini Result -->
       <div
-        v-if="geminiExplanation"
+        v-if="effectiveGeminiExplanation"
         class="bg-info/10 border border-info/20 rounded p-4 text-sm italic leading-relaxed"
       >
         <h4 class="font-bold mb-1 opacity-70 uppercase tracking-wider text-sm">
           Gemini Explanation
         </h4>
-        <pre class="whitespace-pre-wrap font-sans text-info">{{ geminiExplanation }}</pre>
+        <pre class="whitespace-pre-wrap font-sans text-info">{{
+          effectiveGeminiExplanation
+        }}</pre>
       </div>
 
       <!-- Associated Payloads -->
       <div v-if="payloads?.length" class="mt-4">
-        <h4 class="text-sm font-bold opacity-50 uppercase mb-2">Related Payloads</h4>
+        <h4 class="text-sm font-bold opacity-50 uppercase mb-2">
+          Related Payloads
+        </h4>
         <InfoTable>
           <template #header>
             <thead>
@@ -74,9 +92,11 @@
           </template>
           <tr v-for="(p, index) in payloads" :key="index">
             <td>
-              <router-link :to="`/payloads/${p._id}`" class="link link-primary font-mono text-sm">{{
-                p._id
-              }}</router-link>
+              <router-link
+                :to="`/payloads/${p._id}`"
+                class="link link-primary font-mono text-sm"
+                >{{ p._id }}</router-link
+              >
             </td>
             <td>{{ p.yara }}</td>
           </tr>
@@ -95,7 +115,9 @@
 
     <!-- Live YARA Results -->
     <div v-if="yaraResults?.length" class="p-3 bg-base-200 rounded">
-      <h4 class="text-sm font-bold opacity-50 uppercase mb-2">Live YARA Matches</h4>
+      <h4 class="text-sm font-bold opacity-50 uppercase mb-2">
+        Live YARA Matches
+      </h4>
       <div class="flex flex-wrap gap-2">
         <span
           v-for="match in yaraResults"
@@ -111,7 +133,10 @@
     </div>
 
     <!-- Code Viewer -->
-    <div v-if="showContent" class="mockup-code before:hidden px-0 py-0 border border-base-300">
+    <div
+      v-if="showContent"
+      class="mockup-code before:hidden px-0 py-0 border border-base-300"
+    >
       <pre
         class="whitespace-pre-wrap break-all"
         :class="{ 'line-numbers': isHighlightEnabled }"
@@ -157,6 +182,10 @@ export default {
       yaraError: null,
       isScanning: false,
       geminiLoading: false,
+      geminiMessage: '',
+      geminiTaskId: '',
+      geminiPollingInterval: null,
+      localGeminiExplanation: '',
       statusMessage: '',
     };
   },
@@ -165,14 +194,28 @@ export default {
       if (!this.content) return '';
       let out = this.content;
       try {
-        if (this.formatType === 'html') out = beautify.html(out, { indent_size: 2 });
-        else if (this.formatType === 'js') out = beautify(out, { indent_size: 2 });
-        else if (this.formatType === 'css') out = beautify.css(out, { indent_size: 2 });
+        if (this.formatType === 'html')
+          out = beautify.html(out, { indent_size: 2 });
+        else if (this.formatType === 'js')
+          out = beautify(out, { indent_size: 2 });
+        else if (this.formatType === 'css')
+          out = beautify.css(out, { indent_size: 2 });
       } catch (e) {
         console.warn('Beautify failed', e);
       }
       return out;
     },
+    effectiveGeminiExplanation() {
+      // Use local state if available, otherwise use prop
+      return this.localGeminiExplanation || this.geminiExplanation;
+    },
+  },
+  beforeUnmount() {
+    // Clean up polling when component is unmounted
+    if (this.geminiPollingInterval) {
+      clearInterval(this.geminiPollingInterval);
+      this.geminiPollingInterval = null;
+    }
   },
   methods: {
     loadContent() {
@@ -192,16 +235,23 @@ export default {
       if (!el) return;
 
       if (this.isHighlightEnabled) {
-        el.className = 'text-content font-mono text-sm leading-relaxed block px-4 py-2';
-        const langMap = { html: 'language-html', js: 'language-javascript', css: 'language-css' };
+        el.className =
+          'text-content font-mono text-sm leading-relaxed block px-4 py-2';
+        const langMap = {
+          html: 'language-html',
+          js: 'language-javascript',
+          css: 'language-css',
+        };
         let lang = langMap[this.formatType] || 'language-javascript';
 
-        if (this.formatType === 'raw' && this.isJson(this.content)) lang = 'language-json';
+        if (this.formatType === 'raw' && this.isJson(this.content))
+          lang = 'language-json';
 
         el.classList.add(lang);
         Prism.highlightElement(el);
       } else {
-        el.className = 'text-content font-mono text-sm leading-relaxed block px-4 py-2';
+        el.className =
+          'text-content font-mono text-sm leading-relaxed block px-4 py-2';
         el.textContent = this.displayContent;
       }
     },
@@ -225,6 +275,7 @@ export default {
     },
     async explainWithGemini() {
       this.geminiLoading = true;
+      this.geminiMessage = '';
       try {
         const response = await fetch('/api/gemini/explain', {
           method: 'POST',
@@ -237,12 +288,63 @@ export default {
           }),
         });
         if (!response.ok) throw new Error('Failed to queue Gemini task');
+
+        const data = await response.json();
+        this.geminiTaskId = data.taskId;
+        this.geminiMessage = 'Task queued, waiting for result...';
         this.statusMessage = 'Gemini task queued';
+
+        // Start polling for result
+        this.pollGeminiResult(this.geminiTaskId);
       } catch (e) {
         this.statusMessage = 'Error: ' + e.message;
+        this.geminiMessage = '';
       } finally {
         this.geminiLoading = false;
       }
+    },
+    pollGeminiResult(taskId) {
+      // Clear any existing polling
+      if (this.geminiPollingInterval) {
+        clearInterval(this.geminiPollingInterval);
+      }
+
+      // Poll every 2 seconds
+      this.geminiPollingInterval = setInterval(async () => {
+        try {
+          // Poll using targetId and targetType
+          const result = await fetch(
+            `/api/gemini/result/${this.targetId}/${this.targetType}`,
+          ).then((res) => res.json());
+
+          if (result.status === 'completed') {
+            clearInterval(this.geminiPollingInterval);
+            this.geminiPollingInterval = null;
+
+            if (result.explanation) {
+              this.localGeminiExplanation = result.explanation;
+              this.geminiMessage = '';
+              this.statusMessage = 'Gemini explanation completed';
+              // Clear status message after 3 seconds
+              setTimeout(() => (this.statusMessage = ''), 3000);
+            } else if (result.error) {
+              this.geminiMessage = `Error: ${result.error}`;
+            }
+          }
+          // If pending, continue polling
+        } catch (err) {
+          console.error('Error polling Gemini result:', err);
+        }
+      }, 2000);
+
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        if (this.geminiPollingInterval) {
+          clearInterval(this.geminiPollingInterval);
+          this.geminiPollingInterval = null;
+          this.geminiMessage = 'Polling timeout - check result manually';
+        }
+      }, 300000);
     },
     copyToClipboard() {
       navigator.clipboard.writeText(this.displayContent).then(() => {

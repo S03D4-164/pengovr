@@ -15,7 +15,9 @@ router.post('/explain', async (req, res) => {
 
     // targetId または webpageId のいずれかが必須
     if (!targetId && !webpageId) {
-      return res.status(400).json({ error: 'targetId or webpageId is required' });
+      return res
+        .status(400)
+        .json({ error: 'targetId or webpageId is required' });
     }
 
     // WorkerはDBにアクセスできないため、API側でコンテンツを用意する
@@ -33,7 +35,9 @@ router.post('/explain', async (req, res) => {
     }
 
     if (!contentToExplain) {
-      return res.status(400).json({ error: 'Content to explain could not be found or is empty.' });
+      return res
+        .status(400)
+        .json({ error: 'Content to explain could not be found or is empty.' });
     }
 
     const task = {
@@ -110,11 +114,54 @@ router.get('/result/:taskId', async (req, res) => {
     const result = await redis.get(`gemini:result:${taskId}`);
 
     if (!result) {
-      return res.json({ status: 'pending', message: 'Result not yet available' });
+      return res.json({
+        status: 'pending',
+        message: 'Result not yet available',
+      });
     }
 
     const parsedResult = JSON.parse(result);
     res.json({ status: 'completed', ...parsedResult });
+  } catch (error) {
+    console.error('Gemini result error:', error);
+    res.status(500).json({
+      error: 'Failed to get explanation result',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// GET /api/gemini/result/:targetId/:targetType - Get Gemini explanation from document
+router.get('/result/:targetId/:targetType', async (req, res) => {
+  try {
+    const { targetId, targetType } = req.params;
+
+    if (!targetId || !targetType) {
+      return res
+        .status(400)
+        .json({ error: 'targetId and targetType are required' });
+    }
+
+    let document = null;
+
+    if (targetType === 'response') {
+      document = await ResponseModel.findById(targetId);
+    } else {
+      document = await WebpageModel.findById(targetId);
+    }
+
+    if (!document) {
+      return res.status(404).json({ error: `${targetType} not found` });
+    }
+
+    if (document.geminiExplanation) {
+      res.json({
+        status: 'completed',
+        explanation: document.geminiExplanation,
+      });
+    } else {
+      res.json({ status: 'pending', message: 'Explanation not yet available' });
+    }
   } catch (error) {
     console.error('Gemini result error:', error);
     res.status(500).json({

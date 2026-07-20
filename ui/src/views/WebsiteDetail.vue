@@ -12,7 +12,9 @@
           <tr>
             <th class="w-1/3 opacity-60">ID</th>
             <td>
-              <span class="font-mono text-base opacity-70">{{ website._id }}</span>
+              <span class="font-mono text-base opacity-70">{{
+                website._id
+              }}</span>
             </td>
           </tr>
           <tr>
@@ -59,7 +61,9 @@
       <div class="space-y-6">
         <InfoCard v-if="website.track" title="Track Configuration">
           <template #actions>
-            <button @click="startEditingTrack" class="btn btn-sm btn-outline">Edit</button>
+            <button @click="startEditingTrack" class="btn btn-sm btn-outline">
+              Edit
+            </button>
           </template>
           <InfoTable :compact="false">
             <tr>
@@ -79,7 +83,10 @@
               <tr>
                 <th class="w-1/3 opacity-60">Status</th>
                 <td>
-                  <div v-if="website.gsb?.lookup?.matches?.length > 0" class="flex flex-wrap gap-1">
+                  <div
+                    v-if="website.gsb?.lookup?.matches?.length > 0"
+                    class="flex flex-wrap gap-1"
+                  >
                     <span
                       v-for="(warning, idx) in website.gsb.lookup.matches"
                       :key="idx"
@@ -98,7 +105,9 @@
                     class="badge badge-error badge-md text-white"
                     >{{ website.gsb.lookup.error }}</span
                   >
-                  <span v-else class="badge badge-ghost badge-md">Not checked</span>
+                  <span v-else class="badge badge-ghost badge-md"
+                    >Not checked</span
+                  >
                 </td>
               </tr>
             </InfoTable>
@@ -109,8 +118,15 @@
                 :class="gsbSuccess ? 'text-success' : 'text-error'"
                 >{{ gsbMessage }}</span
               >
-              <button @click="runGSBLookup" :disabled="gsbLoading" class="btn btn-sm btn-secondary">
-                <span v-if="gsbLoading" class="loading loading-spinner loading-sm"></span>
+              <button
+                @click="runGSBLookup"
+                :disabled="gsbLoading"
+                class="btn btn-sm btn-secondary"
+              >
+                <span
+                  v-if="gsbLoading"
+                  class="loading loading-spinner loading-sm"
+                ></span>
                 {{ gsbLoading ? 'Checking...' : 'Check GSB' }}
               </button>
             </div>
@@ -123,9 +139,13 @@
     <div class="grid grid-cols-1 gap-6 mb-8">
       <InfoCard v-if="relatedWebpages.length > 0" title="Related Webpages">
         <!-- Pagination Controls -->
-        <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="totalPages > 0">
+        <div
+          class="flex items-center justify-between p-2 mb-2 gap-2"
+          v-if="totalPages > 0"
+        >
           <div class="text-base-content/70 text-sm">
-            Total: {{ totalWebpages }} webpages | Page {{ currentPage }} of {{ totalPages }}
+            Total: {{ totalWebpages }} webpages | Page {{ currentPage }} of
+            {{ totalPages }}
           </div>
           <div class="join">
             <button
@@ -139,7 +159,10 @@
               v-for="page in displayedPages"
               :key="page"
               @click="goToPage(page)"
-              :class="['join-item btn btn-sm', page === currentPage ? 'btn-active' : '']"
+              :class="[
+                'join-item btn btn-sm',
+                page === currentPage ? 'btn-active' : '',
+              ]"
             >
               {{ page }}
             </button>
@@ -164,12 +187,19 @@
             </select>
           </div>
         </div>
-        <WebpageTable :webpages="relatedWebpages" @show-screenshot="showFullScreenshot" />
+        <WebpageTable
+          :webpages="relatedWebpages"
+          @show-screenshot="showFullScreenshot"
+        />
       </InfoCard>
 
       <InfoCard v-if="website.group && website.group.length > 0" title="Groups">
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="group in website.group" :key="group" class="badge badge-outline badge-sm">
+          <span
+            v-for="group in website.group"
+            :key="group"
+            class="badge badge-outline badge-sm"
+          >
             {{ group }}
           </span>
         </div>
@@ -177,7 +207,9 @@
     </div>
 
     <div class="mt-4 mb-16 flex justify-end">
-      <router-link :to="'/remove/website/' + id" class="btn btn-error btn-outline btn-sm"
+      <router-link
+        :to="'/remove/website/' + id"
+        class="btn btn-error btn-outline btn-sm"
         >Delete Data</router-link
       >
     </div>
@@ -201,7 +233,11 @@
     />
 
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="modalScreenshotId" @close="closeModal" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="modalScreenshotId"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -253,6 +289,8 @@ export default {
       gsbLoading: false,
       gsbMessage: '',
       gsbSuccess: false,
+      gsbTaskId: '',
+      gsbPollingInterval: null,
     };
   },
   computed: {
@@ -274,6 +312,13 @@ export default {
   },
   async created() {
     await this.fetchWebsite();
+  },
+  beforeUnmount() {
+    // Clean up polling when component is unmounted
+    if (this.gsbPollingInterval) {
+      clearInterval(this.gsbPollingInterval);
+      this.gsbPollingInterval = null;
+    }
   },
   methods: {
     displayUrl,
@@ -345,7 +390,10 @@ export default {
       return formatImageUrl(thumbnail);
     },
     showFullScreenshot(webpage) {
-      console.log('[WebsiteDetail] Clicked thumbnail. Full webpage object:', webpage);
+      console.log(
+        '[WebsiteDetail] Clicked thumbnail. Full webpage object:',
+        webpage,
+      );
       // メインのスクリーンショットを優先し、なければギャラリーの最初の1枚を使用
       const screenshotId =
         webpage?.screenshot ||
@@ -399,20 +447,25 @@ export default {
       this.gsbLoading = true;
       this.gsbMessage = '';
       try {
-        const response = await fetch(`/api/websites/${this.website._id}/gsb-lookup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          `/api/websites/${this.website._id}/gsb-lookup`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
           },
-        });
+        );
 
         if (response.ok) {
-          console.log('GSB lookup task queued successfully');
-          this.gsbMessage = 'Task queued';
+          const data = await response.json();
+          this.gsbTaskId = data.taskId;
+          this.gsbMessage = 'Task queued, waiting for result...';
           this.gsbSuccess = true;
-          setTimeout(() => {
-            this.gsbMessage = '';
-          }, 5000);
+          console.log('GSB lookup task queued:', this.gsbTaskId);
+
+          // Start polling for result
+          this.pollGSBResult(this.gsbTaskId);
         } else {
           const error = await response.json();
           console.error('Failed to queue GSB lookup:', error);
@@ -426,6 +479,44 @@ export default {
       } finally {
         this.gsbLoading = false;
       }
+    },
+    pollGSBResult(taskId) {
+      // Clear any existing polling
+      if (this.gsbPollingInterval) {
+        clearInterval(this.gsbPollingInterval);
+      }
+
+      // Poll every 2 seconds to fetch updated website data
+      this.gsbPollingInterval = setInterval(async () => {
+        try {
+          const updatedWebsite = await fetch(
+            `/api/websites/${this.website._id}`,
+          ).then((res) => res.json());
+
+          // Check if GSB result has been populated
+          if (updatedWebsite.gsb && updatedWebsite.gsb.lookup) {
+            clearInterval(this.gsbPollingInterval);
+            this.gsbPollingInterval = null;
+
+            // Update website data with result
+            this.website = updatedWebsite;
+            this.gsbMessage = 'GSB check completed';
+            this.gsbSuccess = true;
+          }
+          // If pending, continue polling
+        } catch (err) {
+          console.error('Error polling GSB result:', err);
+        }
+      }, 2000);
+
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        if (this.gsbPollingInterval) {
+          clearInterval(this.gsbPollingInterval);
+          this.gsbPollingInterval = null;
+          this.gsbMessage = 'Polling timeout - check result manually';
+        }
+      }, 300000);
     },
   },
 };
