@@ -30,11 +30,14 @@ async function saveFullscreenshot(
   buff: Buffer,
   tag: Array<Record<string, unknown>>,
   screenshotsCollector?: Array<any>,
+  webpageId?: string,
 ): Promise<string | undefined> {
   try {
     const md5Hash = crypto.createHash('md5').update(buff).digest('hex');
     const generatedId = crypto.randomBytes(12).toString('hex');
-    const s3Key = `screenshots/${generatedId}.png`;
+    const s3Key = webpageId
+      ? `webpages/${webpageId}/screenshots/${md5Hash}.png`
+      : `screenshots/${generatedId}.png`;
 
     logger.info(
       `[Screenshot] In-memory generating screenshot with MD5: ${md5Hash}, size: ${buff.length} bytes`,

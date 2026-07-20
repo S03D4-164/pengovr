@@ -8,6 +8,7 @@ async function savePayload(
   yaraData?: {
     rules: Array<{ id: string; tags: string[]; meta: Record<string, any> }>;
   },
+  webpageId?: string,
 ): Promise<string | undefined> {
   try {
     const md5Hash = crypto
@@ -15,7 +16,9 @@ async function savePayload(
       .update(responseBuffer)
       .digest('hex');
     const generatedId = crypto.randomBytes(12).toString('hex');
-    const s3Key = `payloads/${md5Hash}`;
+    const s3Key = webpageId
+      ? `webpages/${webpageId}/payloads/${md5Hash}`
+      : `payloads/${md5Hash}`;
 
     if (payloadsCollector) {
       // Avoid duplicate payloads in memory based on MD5

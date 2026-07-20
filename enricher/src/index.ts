@@ -51,12 +51,19 @@ class EnrichmentWorker {
 
     // バケットの存在確認と自動作成
     try {
-      await this.s3Client.send(new HeadBucketCommand({ Bucket: config.s3.bucket }));
+      await this.s3Client.send(
+        new HeadBucketCommand({ Bucket: config.s3.bucket }),
+      );
       console.log(`S3 Bucket "${config.s3.bucket}" confirmed.`);
     } catch (error: any) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      if (
+        error.name === 'NotFound' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         console.log(`S3 Bucket "${config.s3.bucket}" not found. Creating...`);
-        await this.s3Client.send(new CreateBucketCommand({ Bucket: config.s3.bucket }));
+        await this.s3Client.send(
+          new CreateBucketCommand({ Bucket: config.s3.bucket }),
+        );
         console.log(`S3 Bucket "${config.s3.bucket}" created successfully.`);
       } else {
         console.error(`Error checking/creating S3 bucket: ${error.message}`);
@@ -103,7 +110,9 @@ class EnrichmentWorker {
     }
 
     this.running = true;
-    console.log(`Starting BullMQ enrichment worker for queue: ${config.enrichmentQueue}...`);
+    console.log(
+      `Starting BullMQ enrichment worker for queue: ${config.enrichmentQueue}...`,
+    );
 
     this.worker = new Worker(
       config.enrichmentQueue,
@@ -178,7 +187,10 @@ class EnrichmentWorker {
       return false;
     }
 
-    if (hostInfo && (hostInfo.ip || hostInfo.reverse || hostInfo.bgp || hostInfo.geoip)) {
+    if (
+      hostInfo &&
+      (hostInfo.ip || hostInfo.reverse || hostInfo.bgp || hostInfo.geoip)
+    ) {
       target.remoteAddress = {
         ip: hostInfo.ip,
         reverse: (hostInfo.reverse as string[]) || [],
@@ -204,7 +216,10 @@ class EnrichmentWorker {
 
         if (
           dnsInfo &&
-          (dnsInfo.records.A || dnsInfo.records.AAAA || dnsInfo.records.MX || dnsInfo.records.NS)
+          (dnsInfo.records.A ||
+            dnsInfo.records.AAAA ||
+            dnsInfo.records.MX ||
+            dnsInfo.records.NS)
         ) {
           const records = {
             A: dnsInfo.records.A || [],
@@ -236,7 +251,10 @@ class EnrichmentWorker {
           console.log(`No DNS records found for ${targetName} host:`, host);
         }
       } catch (dnsError: any) {
-        console.error(`DNS lookup failed for ${targetName} ${host}:`, dnsError.message);
+        console.error(
+          `DNS lookup failed for ${targetName} ${host}:`,
+          dnsError.message,
+        );
         target.remoteAddress = {
           ...target.remoteAddress,
           dns: {
@@ -287,7 +305,12 @@ class EnrichmentWorker {
     // Handle Gemini explanation task
     if (taskType === 'gemini_explain') {
       const targetId = data.targetId || webpageId;
-      await this.processGeminiExplainTask(taskId, targetId, targetType || 'webpage', taskContent);
+      await this.processGeminiExplainTask(
+        taskId,
+        targetId,
+        targetType || 'webpage',
+        taskContent,
+      );
       return;
     }
 
@@ -328,9 +351,12 @@ class EnrichmentWorker {
       const inputKey = resultKey || s3Key;
       if (!inputKey) throw new Error('No resultKey/s3Key provided');
 
-      console.log(`Downloading source data for job ${jobName} from S3: ${inputKey}`);
+      console.log(
+        `Downloading source data for job ${jobName} from S3: ${inputKey}`,
+      );
       const fullData = await this.downloadFromS3(inputKey);
-      if (!fullData || !fullData.webpage) throw new Error('Failed to download source data');
+      if (!fullData || !fullData.webpage)
+        throw new Error('Failed to download source data');
       const webpage = fullData.webpage;
       const responses = fullData.webpage.responses || [];
 
@@ -386,10 +412,16 @@ class EnrichmentWorker {
 
       // 各タスクの結果を個別に保存 (finalizer ジョブ自体は結果データのアップロード不要)
       if (jobName !== 'enrichment_finalizer') {
-        const enrichmentResultKey = `results/${actualJobId}.json`;
+        const enrichmentResultKey = `webpages/${webpageId}/enrichments/${jobName}.json`;
         const resultData = { webpage, responses };
-        await this.uploadToS3(enrichmentResultKey, JSON.stringify(resultData), 'application/json');
-        console.log(`Results for ${jobName} uploaded to: ${enrichmentResultKey}`);
+        await this.uploadToS3(
+          enrichmentResultKey,
+          JSON.stringify(resultData),
+          'application/json',
+        );
+        console.log(
+          `Results for ${jobName} uploaded to: ${enrichmentResultKey}`,
+        );
       }
 
       console.log(`Job ${actualJobId} completed successfully`);
@@ -407,7 +439,9 @@ class EnrichmentWorker {
     content: string | undefined,
   ) {
     try {
-      console.log(`Processing Gemini explanation for task ${taskId}, ${targetType} ${targetId}`);
+      console.log(
+        `Processing Gemini explanation for task ${taskId}, ${targetType} ${targetId}`,
+      );
 
       // API接続禁止のため、コンテンツはジョブデータから直接取得する
       const contentToExplain = content;
@@ -423,27 +457,57 @@ class EnrichmentWorker {
 
       if (explanation) {
         // 結果をMinIOに保存
-        const storageKey = `explanations/${taskId}.txt`;
-        const storagePath = await this.uploadToS3(storageKey, explanation, 'text/plain');
+        let storageKey: string;
+        if (targetType === 'response') {
+          storageKey = `responses/${targetId}/explanations/${taskId}.txt`;
+        } else if (targetType === 'webpage') {
+          storageKey = `webpages/${targetId}/explanations/${taskId}.txt`;
+        } else {
+          // deobfuscator or other types
+          storageKey = `explanations/gemini/content-${taskId}.txt`;
+        }
+        const storagePath = await this.uploadToS3(
+          storageKey,
+          explanation,
+          'text/plain',
+        );
         console.log(`Gemini explanation saved to SeaweedFS: ${storagePath}`);
       }
 
       console.log(`Gemini explanation completed for task ${taskId}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`Error processing Gemini explanation for task ${taskId}:`, error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(
+        `Error processing Gemini explanation for task ${taskId}:`,
+        error,
+      );
 
       // エラー情報もSeaweedFSに保存して、API側で確認できるようにする
-      await this.uploadToS3(`explanations/${taskId}-error.txt`, errorMessage, 'text/plain');
+      let errorKey: string;
+      if (content?.includes('response') || content?.includes('text')) {
+        // Guess from content type, default to gemini
+        errorKey = `explanations/gemini/content-${taskId}-error.txt`;
+      } else {
+        errorKey = `explanations/gemini/content-${taskId}-error.txt`;
+      }
+      await this.uploadToS3(errorKey, errorMessage, 'text/plain');
     }
   }
 
-  async processGeminiExplainContentTask(taskId: string, content: string | undefined) {
+  async processGeminiExplainContentTask(
+    taskId: string,
+    content: string | undefined,
+  ) {
     try {
-      console.log(`Processing Gemini explanation for raw content, task ${taskId}`);
+      console.log(
+        `Processing Gemini explanation for raw content, task ${taskId}`,
+      );
 
       if (!content) {
-        console.error(`Gemini explain content task ${taskId}: no content provided`);
+        console.error(
+          `Gemini explain content task ${taskId}: no content provided`,
+        );
         await this.redis.setex(
           `gemini:result:${taskId}`,
           3600,
@@ -460,11 +524,19 @@ class EnrichmentWorker {
         ? { explanation, status: 'completed' }
         : { error: 'No explanation generated', status: 'failed' };
 
-      await this.redis.setex(`gemini:result:${taskId}`, 3600, JSON.stringify(result));
+      await this.redis.setex(
+        `gemini:result:${taskId}`,
+        3600,
+        JSON.stringify(result),
+      );
       console.log(`Gemini explanation saved to Redis for task ${taskId}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`Error processing Gemini explanation for task ${taskId}:`, error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(
+        `Error processing Gemini explanation for task ${taskId}:`,
+        error,
+      );
 
       // Save error to Redis
       await this.redis.setex(
@@ -475,49 +547,78 @@ class EnrichmentWorker {
     }
   }
 
-  async processVTSearchTask(taskId: string, payloadId: string, md5: string): Promise<void> {
+  async processVTSearchTask(
+    taskId: string,
+    payloadId: string,
+    md5: string,
+  ): Promise<void> {
     try {
       console.log(`Processing VT search task for payload ${payloadId}`);
       const result = await vt(md5);
 
       if (result.error) {
-        console.error(`VT search failed for payload ${payloadId}:`, result.error);
+        console.error(
+          `VT search failed for payload ${payloadId}:`,
+          result.error,
+        );
       } else {
         console.log(`VT search completed for payload ${payloadId}`);
       }
 
       // 結果をMinIOに保存（API側が回収できるように）
-      const resultKey = `results/vt-${taskId}.json`;
+      const resultKey = `payloads/${payloadId}/vt/${taskId}.json`;
       await this.uploadToS3(
         resultKey,
         JSON.stringify({ payloadId, vt: result }),
         'application/json',
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`Error processing VT search for payload ${payloadId}:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(
+        `Error processing VT search for payload ${payloadId}:`,
+        errorMessage,
+      );
     }
   }
 
-  async processGSBLookupTask(taskId: string, websiteId: string, url: string): Promise<void> {
+  async processGSBLookupTask(
+    taskId: string,
+    websiteId: string,
+    url: string,
+  ): Promise<void> {
     try {
-      console.log(`Processing GSB lookup task for website ${websiteId}, url: ${url}`);
+      console.log(
+        `Processing GSB lookup task for website ${websiteId}, url: ${url}`,
+      );
       // lookupSiteはWebsiteModelを使用してしまうため、直接lookupUrlを使用して検査のみ行う
       const result = await lookupUrl(url);
 
-      const resultKey = `results/gsb-${taskId}.json`;
+      const resultKey = `websites/${websiteId}/gsb/${taskId}.json`;
       const resultData = {
         taskId,
         websiteId,
         url,
         gsb: result,
       };
-      await this.uploadToS3(resultKey, JSON.stringify(resultData), 'application/json');
+      await this.uploadToS3(
+        resultKey,
+        JSON.stringify(resultData),
+        'application/json',
+      );
       console.log(`GSB lookup results saved to SeaweedFS: ${resultKey}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`Error processing GSB lookup for website ${websiteId}:`, errorMessage);
-      await this.uploadToS3(`results/gsb-${taskId}-error.txt`, errorMessage, 'text/plain');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(
+        `Error processing GSB lookup for website ${websiteId}:`,
+        errorMessage,
+      );
+      await this.uploadToS3(
+        `results/gsb-${taskId}-error.txt`,
+        errorMessage,
+        'text/plain',
+      );
     }
   }
 }
@@ -543,7 +644,9 @@ process.on('SIGINT', async () => {
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, shutting down enrichment worker gracefully...');
+  console.log(
+    'Received SIGTERM, shutting down enrichment worker gracefully...',
+  );
   await enrichmentWorker.stop();
   await enrichmentWorker.redis.disconnect();
   process.exit(0);

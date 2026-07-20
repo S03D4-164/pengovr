@@ -63,6 +63,7 @@ async function playwgetAction(
           screenshot,
           [],
           screenshotsCollector,
+          pageId,
         );
         if (fss) {
           ssobj.full = fss;
@@ -80,6 +81,7 @@ async function playwgetAction(
         contentBuffer,
         payloadsCollector,
         yaraResult,
+        pageId,
       );
       if (payloadId) {
         webpage.payloads.push(payloadId);
@@ -133,7 +135,12 @@ async function playwgetAction(
     // Save clipboard text to payload if it exists
     if (clipboardText && clipboardText.length > 0) {
       const clipboardBuffer = Buffer.from(clipboardText, 'utf-8');
-      const payloadId = await savePayload(clipboardBuffer, payloadsCollector);
+      const payloadId = await savePayload(
+        clipboardBuffer,
+        payloadsCollector,
+        undefined,
+        pageId,
+      );
       if (payloadId) {
         webpage.payloads.push(payloadId);
         logger.info(

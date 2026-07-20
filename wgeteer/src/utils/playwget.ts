@@ -461,7 +461,12 @@ async function playwget(webpage: any): Promise<any> {
     const screenshot = await cdpScreenshot(client);
     const resizedImg = await imgResize(screenshot);
     webpage.thumbnail = resizedImg.toString('base64');
-    let fss = await saveFullscreenshot(screenshot, [], screenshotsCollector);
+    let fss = await saveFullscreenshot(
+      screenshot,
+      [],
+      screenshotsCollector,
+      pageId,
+    );
     if (fss) {
       webpage.screenshot = fss;
     }
@@ -487,7 +492,12 @@ async function playwget(webpage: any): Promise<any> {
             url: webpage.url,
           },
         ];
-        let fss = await saveFullscreenshot(pngData, tag, screenshotsCollector);
+        let fss = await saveFullscreenshot(
+          pngData,
+          tag,
+          screenshotsCollector,
+          pageId,
+        );
         if (fss) {
           ssobj.full = fss;
         }

@@ -1,10 +1,15 @@
 import { QueueEvents, Queue } from 'bullmq';
-import { GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import s3Client, { downloadBuffer } from '../utils/s3'; // 共通のクライアントをインポート
 import mongoose from 'mongoose';
 import WebsiteModel from '../models/website';
 import WebpageModel from '../models/webpage';
 import ResponseModel from '../models/response';
+import PayloadModel from '../models/payload';
 import { HarfileModel } from '../models/harfile';
 import config from '../config';
 import { logError, shouldLog } from '../utils/logger';
@@ -58,7 +63,9 @@ export function initResultListeners(
 
     // ジョブの種類に応じた適切な結果ファイルのみを処理する
     if (job.name === 'gsb_lookup') {
-      const gsbResult = await getJsonFromS3(`results/gsb-${jobId}.json`);
+      const websiteId = job.data.websiteId;
+      const s3Key = `websites/${websiteId}/gsb/${jobId}.json`;
+      const gsbResult = await getJsonFromS3(s3Key);
       if (gsbResult) {
         await WebsiteModel.findByIdAndUpdate(gsbResult.websiteId, {
           $set: { gsb: { lookup: gsbResult.gsb, lastLookup: new Date() } },
@@ -69,14 +76,15 @@ export function initResultListeners(
         await s3Client.send(
           new DeleteObjectCommand({
             Bucket: config.s3.bucket,
-            Key: `results/gsb-${jobId}.json`,
+            Key: s3Key,
           }),
         );
         return;
       }
     } else if (['enrichment', 'yara', 'wappalyzer', 'dns'].includes(job.name)) {
       // Worker側で保存した jobId.json を取得
-      const s3Key = `results/${jobId}.json`;
+      const targetWebpageId = job.data.webpageId;
+      const s3Key = `webpages/${targetWebpageId}/enrichments/${job.name}.json`;
       const enrichResult = await getJsonFromS3(s3Key);
       if (enrichResult) {
         const webpageData = { ...enrichResult.webpage };
@@ -181,31 +189,124 @@ export function initResultListeners(
         }
         return;
       }
-    } else if (job.name === 'enrichment_finalizer') {
-      console.log(job.data);
-      // すべての子ジョブ (yara, wappalyzer, dns) が成功した後にここが実行される
-      if (job.data.resultKey) {
+    } else if (job.name === 'vt_search') {
+      const payloadId = job.data.payloadId;
+      const s3Key = `payloads/${payloadId}/vt/${jobId}.json`;
+      const vtResult = await getJsonFromS3(s3Key);
+      if (vtResult) {
+        await PayloadModel.findByIdAndUpdate(payloadId, {
+          $set: { vt: vtResult.vt },
+        });
         console.log(
-          `[ResultProcessor] All enrichment sub-tasks completed. Cleaning up source: ${job.data.resultKey}`,
+          `[ResultProcessor] MongoDB: VT search results saved for Payload ${payloadId}`,
         );
         await s3Client
           .send(
             new DeleteObjectCommand({
               Bucket: config.s3.bucket,
-              Key: job.data.resultKey,
+              Key: s3Key,
             }),
           )
-          .catch((err) =>
-            console.warn(`[ResultProcessor] Cleanup failed: ${err.message}`),
+          .catch(() => null);
+        return;
+      }
+    } else if (job.name === 'enrichment_finalizer') {
+      console.log(job.data);
+      // すべての子ジョブ (yara, wappalyzer, dns) が成功した後にここが実行される
+      const webpageId = job.data.webpageId;
+
+      // Check if keeps3 is enabled
+      let keeps3 = false;
+      if (webpageId) {
+        try {
+          const webpage = await WebpageModel.findById(webpageId);
+          keeps3 = webpage?.option?.keeps3 || false;
+        } catch (err) {
+          console.warn(`Failed to fetch webpage ${webpageId}:`, err);
+        }
+      }
+
+      if (!keeps3) {
+        if (job.data.resultKey) {
+          console.log(
+            `[ResultProcessor] All enrichment sub-tasks completed. Cleaning up source: ${job.data.resultKey}`,
           );
+          await s3Client
+            .send(
+              new DeleteObjectCommand({
+                Bucket: config.s3.bucket,
+                Key: job.data.resultKey,
+              }),
+            )
+            .catch((err) =>
+              console.warn(`[ResultProcessor] Cleanup failed: ${err.message}`),
+            );
+        }
+
+        // Clean up payloads and screenshots under webpages/{webpageId}/
+        if (webpageId) {
+          const prefixes = ['payloads', 'screenshots'];
+          for (const prefix of prefixes) {
+            const listPrefix = `webpages/${webpageId}/${prefix}/`;
+            try {
+              let continuationToken: string | undefined;
+              do {
+                const listResponse = await s3Client.send(
+                  new ListObjectsV2Command({
+                    Bucket: config.s3.bucket,
+                    Prefix: listPrefix,
+                    ContinuationToken: continuationToken,
+                  }),
+                );
+
+                if (listResponse.Contents) {
+                  for (const obj of listResponse.Contents) {
+                    if (obj.Key) {
+                      await s3Client.send(
+                        new DeleteObjectCommand({
+                          Bucket: config.s3.bucket,
+                          Key: obj.Key,
+                        }),
+                      );
+                    }
+                  }
+                }
+
+                continuationToken = listResponse.NextContinuationToken;
+              } while (continuationToken);
+
+              console.log(
+                `[ResultProcessor] Cleaned up ${prefix} for webpage ${webpageId}`,
+              );
+            } catch (err: any) {
+              console.warn(
+                `[ResultProcessor] Failed to cleanup ${prefix} for webpage ${webpageId}: ${err.message}`,
+              );
+            }
+          }
+        }
+      } else {
+        console.log(
+          `[ResultProcessor] Skipping S3 cleanup for webpage ${webpageId} because keeps3 is enabled`,
+        );
       }
       return;
     } else if (job.name === 'gemini_explain') {
+      let s3Key: string;
+      if (job.data.targetType === 'response') {
+        s3Key = `responses/${job.data.targetId}/explanations/${jobId}.txt`;
+      } else if (job.data.targetType === 'webpage') {
+        s3Key = `webpages/${job.data.targetId}/explanations/${jobId}.txt`;
+      } else {
+        // deobfuscator or other types
+        s3Key = `explanations/gemini/content-${jobId}.txt`;
+      }
+
       const explanation = await s3Client
         .send(
           new GetObjectCommand({
             Bucket: config.s3.bucket,
-            Key: `explanations/${jobId}.txt`,
+            Key: s3Key,
           }),
         )
         .then((res) => res.Body?.transformToString())
@@ -228,6 +329,16 @@ export function initResultListeners(
         console.log(
           `[ResultProcessor] MongoDB: Gemini explanation successfully saved.`,
         );
+
+        // 説明をS3から削除
+        await s3Client
+          .send(
+            new DeleteObjectCommand({
+              Bucket: config.s3.bucket,
+              Key: s3Key,
+            }),
+          )
+          .catch(() => null);
         return;
       }
     } else if (job.name === 'process_har') {

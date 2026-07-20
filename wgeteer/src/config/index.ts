@@ -12,7 +12,7 @@ const config = {
     endpoint: process.env.S3_ENDPOINT,
     accessKey: process.env.S3_ACCESS_KEY || 'pengovr-admin',
     secretKey: process.env.S3_SECRET_KEY || 'pengovr-password',
-    bucket: process.env.S3_BUCKET || 'pengovr-assets',
+    bucket: process.env.S3_BUCKET || 'pengovr-s3-bucket',
     region: process.env.S3_REGION || 'us-east-1',
   },
 };

@@ -72,7 +72,7 @@ class Scraper {
     };
 
     // Upload the monolithic result file
-    const resultKey = `${webpageId}/result.json.gz`;
+    const resultKey = `webpages/${webpageId}/result.json.gz`;
     console.log(`[${webpageId}] Uploading monolithic result to S3...`);
     await uploadJSONGzip(resultKey, finalResult);
 

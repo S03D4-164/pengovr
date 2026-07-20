@@ -1,5 +1,5 @@
 import logger from './logger.js';
-import crypto from 'crypto';
+//import crypto from 'crypto';
 import * as fs from 'fs';
 import { ZipWriter, BlobWriter, BlobReader } from '@zip.js/zip.js';
 import { uploadBuffer } from './s3.js';
@@ -40,8 +40,7 @@ async function saveHarfile(
   const zippedHar = await createZip(buf, `${pageId}.har`, 'infected');
   logger.debug(`[${pageId}] Compressed HAR size: ${zippedHar.length} bytes`);
   try {
-    const generatedId = crypto.randomBytes(12).toString('hex');
-    const s3Key = `harfiles/${generatedId}.zip`;
+    const s3Key = `webpages/${pageId}/harfile.zip`;
     await uploadBuffer(s3Key, zippedHar, 'application/zip');
     return s3Key;
   } catch (err: any) {

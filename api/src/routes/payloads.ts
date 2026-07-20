@@ -22,7 +22,10 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const payloads = await PayloadModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const payloads = await PayloadModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const total = await PayloadModel.countDocuments(query);
 
@@ -67,6 +70,7 @@ router.post('/:id/vt-search', async (req: any, res) => {
       id: vtTaskId,
       type: 'vt_search',
       payloadId: req.params.id,
+      md5: payload.md5,
       timestamp: new Date().toISOString(),
     };
 

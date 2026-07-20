@@ -35,7 +35,12 @@ async function saveResponse(
   }
 
   if (responseBuffer) {
-    payloadId = await savePayload(responseBuffer, payloadsCollector);
+    payloadId = await savePayload(
+      responseBuffer,
+      payloadsCollector,
+      undefined,
+      pageId,
+    );
   }
 
   try {

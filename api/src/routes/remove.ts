@@ -45,8 +45,10 @@ router.get('/:type/:id', async (req, res) => {
           });
         }
         if (w.screenshot) {
-          if (typeof w.screenshot === 'string') screenshotIds.push(w.screenshot);
-          else if (w.screenshot._id) screenshotIds.push(w.screenshot._id.toString());
+          if (typeof w.screenshot === 'string')
+            screenshotIds.push(w.screenshot);
+          else if (w.screenshot._id)
+            screenshotIds.push(w.screenshot._id.toString());
         }
         if (w.screenshots && Array.isArray(w.screenshots)) {
           w.screenshots.forEach((s: any) => {
@@ -62,8 +64,12 @@ router.get('/:type/:id', async (req, res) => {
 
       // Fetch full documents
       const [payloads, responses, screenshots] = await Promise.all([
-        payloadIds.length > 0 ? PayloadModel.find({ _id: { $in: payloadIds } }).lean() : [],
-        responseIds.length > 0 ? ResponseModel.find({ _id: { $in: responseIds } }).lean() : [],
+        payloadIds.length > 0
+          ? PayloadModel.find({ _id: { $in: payloadIds } }).lean()
+          : [],
+        responseIds.length > 0
+          ? ResponseModel.find({ _id: { $in: responseIds } }).lean()
+          : [],
         screenshotIds.length > 0
           ? ScreenshotModel.find({ _id: { $in: screenshotIds } }).lean()
           : [],
@@ -92,7 +98,9 @@ router.get('/:type/:id', async (req, res) => {
       }
 
       // Find webpages that reference this payload
-      const webpages = await WebpageModel.find({ payloads: { $in: [id] } }).lean();
+      const webpages = await WebpageModel.find({
+        payloads: { $in: [id] },
+      }).lean();
 
       // Get webpage IDs for related data lookup
       const webpageIds = webpages.map((w) => w._id.toString());
@@ -109,8 +117,10 @@ router.get('/:type/:id', async (req, res) => {
         }
         // Collect screenshots
         if (w.screenshot) {
-          if (typeof w.screenshot === 'string') screenshotIds.push(w.screenshot);
-          else if (w.screenshot._id) screenshotIds.push(w.screenshot._id.toString());
+          if (typeof w.screenshot === 'string')
+            screenshotIds.push(w.screenshot);
+          else if (w.screenshot._id)
+            screenshotIds.push(w.screenshot._id.toString());
         }
         if (w.screenshots && Array.isArray(w.screenshots)) {
           w.screenshots.forEach((s: any) => {
@@ -132,7 +142,9 @@ router.get('/:type/:id', async (req, res) => {
 
       // Fetch related responses and screenshots
       const [responses, screenshots] = await Promise.all([
-        responseIds.length > 0 ? ResponseModel.find({ _id: { $in: responseIds } }).lean() : [],
+        responseIds.length > 0
+          ? ResponseModel.find({ _id: { $in: responseIds } }).lean()
+          : [],
         screenshotIds.length > 0
           ? ScreenshotModel.find({ _id: { $in: screenshotIds } }).lean()
           : [],
@@ -154,7 +166,9 @@ router.get('/:type/:id', async (req, res) => {
         screenshots,
       });
     } else {
-      return res.status(400).json({ error: 'Invalid type. Must be "website" or "payload"' });
+      return res
+        .status(400)
+        .json({ error: 'Invalid type. Must be "website" or "payload"' });
     }
   } catch (error) {
     console.error('Error fetching related data:', error);
@@ -166,7 +180,8 @@ router.get('/:type/:id', async (req, res) => {
 router.post('/:type/:id', async (req, res) => {
   try {
     const { type, id } = req.params;
-    const { payloads, responses, webpages, screenshots, removeTarget } = req.body;
+    const { payloads, responses, webpages, screenshots, removeTarget } =
+      req.body;
 
     const removed = {
       payloads: 0,
@@ -184,7 +199,9 @@ router.post('/:type/:id', async (req, res) => {
 
     // Delete responses
     if (responses && responses.length > 0) {
-      const result = await ResponseModel.deleteMany({ _id: { $in: responses } });
+      const result = await ResponseModel.deleteMany({
+        _id: { $in: responses },
+      });
       removed.responses = result.deletedCount || 0;
     }
 
@@ -196,7 +213,9 @@ router.post('/:type/:id', async (req, res) => {
 
     // Delete screenshots
     if (screenshots && screenshots.length > 0) {
-      const result = await ScreenshotModel.deleteMany({ _id: { $in: screenshots } });
+      const result = await ScreenshotModel.deleteMany({
+        _id: { $in: screenshots },
+      });
       removed.screenshots = result.deletedCount || 0;
     }
 

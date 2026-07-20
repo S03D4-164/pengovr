@@ -96,7 +96,12 @@ async function pptrEventSet(
     try {
       const buffer: any = await readableToBuffer(read);
       logger.debug(`Downloaded ${buffer.length} bytes of data.`);
-      const payloadId: any = await savePayload(buffer, payloadsCollector);
+      const payloadId: any = await savePayload(
+        buffer,
+        payloadsCollector,
+        undefined,
+        pageId,
+      );
       if (payloadId) {
         logger.debug(`Payload saved with ID: ${payloadId}`);
         webpage.payload = payloadId;
