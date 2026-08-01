@@ -1,7 +1,8 @@
 services:
   # MongoDB Replica Set - Primary
   mongo1:
-    image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    #image: mongo@sha256:ef25c5afd795261ac6942b8ffd4e9b97f8a73146e6171f39e246c331ac94120f
+    image: mongo:4.4.29
     container_name: mongo1
     hostname: mongo1
     ports:
@@ -31,8 +32,8 @@ services:
       - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - S3_ENDPOINT=http://127.0.0.1:8333
-      #- S3_ENDPOINT=
+      #- S3_ENDPOINT=http://127.0.0.1:8333
+      - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
