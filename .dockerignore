@@ -31,3 +31,7 @@ logs
 .npm
 .pnpm-store
 .pengovr_cache
+
+# CDK artifacts (to avoid recursive nesting when used as build context)
+**/cdk.out
+cdk.out

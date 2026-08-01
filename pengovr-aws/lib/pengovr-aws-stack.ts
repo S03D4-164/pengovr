@@ -3,6 +3,9 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
+import * as path from 'path';
 
 export class PengovrAwsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -113,6 +116,23 @@ export class PengovrAwsStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'Ec2PublicIp', {
       value: instance.instancePublicIp,
       description: 'Public IP address of the EC2 instance',
+    });
+
+    const appImageAsset = new ecr_assets.DockerImageAsset(
+      this,
+      'AppDockerImage',
+      {
+        // ビルドコンテキストをプロジェクトルートに設定
+        directory: path.join(__dirname, '../../'),
+        // Dockerfile のパスを指定
+        file: 'pengovr-aws/Dockerfile.alpine',
+      },
+    );
+
+    new cdk.CfnOutput(this, 'BuiltContainerImageUri', {
+      value: appImageAsset.imageUri,
+      description:
+        'URI of the Docker image automatically built and pushed by CDK',
     });
   }
 }
