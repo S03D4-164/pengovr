@@ -7,6 +7,8 @@ import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as applicationautoscaling from 'aws-cdk-lib/aws-applicationautoscaling';
 
 export class PengovrAwsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -112,13 +114,42 @@ export class PengovrAwsStack extends cdk.Stack {
       },
     });
 
+    // EC2 インスタンスの IAM ロールに CloudWatch 権限を付与
+    instance.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      }),
+    );
+
     instance.addUserData(
       'dnf update -y',
-      'dnf install -y valkey', // Amazon Linux 2023 推奨の Redis 互換パッケージ
+      'dnf install -y valkey cronie', // Amazon Linux 2023 推奨の Redis 互換パッケージ
       "sed -i 's/^bind .*/bind 0.0.0.0/' /etc/valkey/valkey.conf",
       "sed -i 's/^protected-mode yes/protected-mode no/' /etc/valkey/valkey.conf",
       'systemctl enable valkey', // OS起動時の自動起動を有効化
       'systemctl start valkey', // 今すぐ起動
+      `cat << 'EOF' > /usr/local/bin/send_bullmq_metrics.sh
+#!/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin:$PATH
+QUEUE_NAME="scraping-tasks"
+METRIC_NAME="WaitingJobCount"
+NAMESPACE="BullMQ/Metrics"
+REGION="us-east-1"
+
+WAITING=$(valkey-cli llen "bull:${QUEUE_NAME}:wait" 2>/dev/null || echo 0)
+ACTIVE=$(valkey-cli llen "bull:${QUEUE_NAME}:active" 2>/dev/null || echo 0)
+
+TOTAL_COUNT=$((WAITING + ACTIVE))
+
+aws cloudwatch put-metric-data \
+  --namespace "$NAMESPACE" \
+  --metric-data MetricName=$METRIC_NAME,Value=$TOTAL_COUNT,Unit=Count,"Dimensions=[{Name=QueueName,Value=$QUEUE_NAME}]" \
+  --region $REGION
+EOF`,
+      'chmod +x /usr/local/bin/send_bullmq_metrics.sh',
+
+      'echo "* * * * * /usr/local/bin/send_bullmq_metrics.sh" | crontab -',
     );
 
     // 出力設定：EC2のパブリックIPアドレスを表示
@@ -147,7 +178,7 @@ export class PengovrAwsStack extends cdk.Stack {
     const logGroup = new logs.LogGroup(this, 'WorkerLogGroup', {
       logGroupName: '/ecs/pengovr-worker-task',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      retention: logs.RetentionDays.ONE_MONTH,
+      retention: logs.RetentionDays.ONE_DAY,
     });
 
     // タスクロールと実行ロールの設定
@@ -215,5 +246,68 @@ export class PengovrAwsStack extends cdk.Stack {
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
     });
+
+    // スケーリングの対象と範囲を設定
+    const scalableTarget = fargateService.autoScaleTaskCount({
+      minCapacity: 0,
+      maxCapacity: 2,
+    });
+
+    // CloudWatch カスタムメトリクスを定義
+    const queueLengthMetric = new cloudwatch.Metric({
+      namespace: 'BullMQ/Metrics',
+      metricName: 'WaitingJobCount',
+      dimensionsMap: {
+        QueueName: 'scraping-tasks',
+      },
+      statistic: 'Average',
+      period: cdk.Duration.minutes(1),
+    });
+
+    // スケールアウト（増設）用 Step Scaling ポリシー
+    scalableTarget.scaleOnMetric('StepScaleOutPolicy', {
+      metric: queueLengthMetric,
+      scalingSteps: [
+        { upper: 0, change: 0 }, // 0件: 0台
+        { lower: 1, upper: 2, change: 1 }, // 1件: 1台
+        { lower: 2, change: 2 }, // 2件以上: 2台（最大）
+      ],
+      // ExactCapacity: scalingSteps の change の値を「全体のタスク台数」として直接適用
+      adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
+
+      // 評価期間とメトリクス集計の設定
+      evaluationPeriods: 1, // 1回の評価（1分間）で即時判定
+      metricAggregationType:
+        applicationautoscaling.MetricAggregationType.AVERAGE,
+
+      // クールダウン期間（連動して増設されすぎないよう調整）
+      cooldown: cdk.Duration.seconds(60),
+    });
+
+    // スケールイン（削減）用 Step Scaling ポリシー
+    scalableTarget.scaleOnMetric('StepScaleInPolicy', {
+      metric: queueLengthMetric,
+      scalingSteps: [
+        { upper: 0, change: 0 }, // 0件の時は 0台 に変更
+        { lower: 1, change: 0 }, // 1件以上ある時はこのポリシーでは何もしない（スケールインしない）
+      ],
+      adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
+
+      // 誤判定を防ぐため、3分連続で 0件 だった場合のみ縮小
+      evaluationPeriods: 3,
+      metricAggregationType:
+        applicationautoscaling.MetricAggregationType.AVERAGE,
+
+      // 処理中のタスクが安全に終了できるよう cooldown を長めに設定（例: 5分）
+      cooldown: cdk.Duration.seconds(300),
+    });
+
+    // Worker タスクが CloudWatch にメトリクスを送信できる権限を付与
+    taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      }),
+    );
   }
 }
