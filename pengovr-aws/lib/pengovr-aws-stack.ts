@@ -3,8 +3,9 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path';
 
 export class PengovrAwsStack extends cdk.Stack {
@@ -78,6 +79,12 @@ export class PengovrAwsStack extends cdk.Stack {
       );
     }
 
+    securityGroup.addIngressRule(
+      ec2.Peer.ipv4(vpc.vpcCidrBlock),
+      ec2.Port.tcp(6379),
+      'Allow Redis/Valkey access from VPC',
+    );
+
     const keyPair = new ec2.KeyPair(this, 'MyKeyPair', {
       keyPairName: 'pengovr-ec2-ssh',
       type: ec2.KeyPairType.ED25519, // または RSA
@@ -108,6 +115,8 @@ export class PengovrAwsStack extends cdk.Stack {
     instance.addUserData(
       'dnf update -y',
       'dnf install -y valkey', // Amazon Linux 2023 推奨の Redis 互換パッケージ
+      "sed -i 's/^bind .*/bind 0.0.0.0/' /etc/valkey/valkey.conf",
+      "sed -i 's/^protected-mode yes/protected-mode no/' /etc/valkey/valkey.conf",
       'systemctl enable valkey', // OS起動時の自動起動を有効化
       'systemctl start valkey', // 今すぐ起動
     );
@@ -118,21 +127,93 @@ export class PengovrAwsStack extends cdk.Stack {
       description: 'Public IP address of the EC2 instance',
     });
 
-    const appImageAsset = new ecr_assets.DockerImageAsset(
+    // Dockerイメージのアセット定義（Dockerファイルがあるローカルパスを指定）
+    const workerImageAsset = new ecr_assets.DockerImageAsset(
       this,
-      'AppDockerImage',
+      'WorkerImageAsset',
       {
-        // ビルドコンテキストをプロジェクトルートに設定
         directory: path.join(__dirname, '../../'),
-        // Dockerfile のパスを指定
         file: 'pengovr-aws/Dockerfile.alpine',
       },
     );
 
     new cdk.CfnOutput(this, 'BuiltContainerImageUri', {
-      value: appImageAsset.imageUri,
+      value: workerImageAsset.imageUri,
       description:
         'URI of the Docker image automatically built and pushed by CDK',
+    });
+
+    // CloudWatch ロググループの定義
+    const logGroup = new logs.LogGroup(this, 'WorkerLogGroup', {
+      logGroupName: '/ecs/pengovr-worker-task',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.ONE_MONTH,
+    });
+
+    // タスクロールと実行ロールの設定
+    const taskRole = new iam.Role(this, 'WorkerTaskRole', {
+      roleName: 'pengovr-worker-task-role',
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+    });
+    taskRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
+    );
+
+    // クラスターの定義 (pengovr-cluster)
+    const cluster = new ecs.Cluster(this, 'PengovrCluster', {
+      clusterName: 'pengovr-cluster',
+      vpc,
+    });
+
+    // Fargate タスク定義 (pengovr-worker-task)
+    const taskDefinition = new ecs.FargateTaskDefinition(
+      this,
+      'WorkerTaskDef',
+      {
+        family: 'pengovr-worker-task',
+        cpu: 512, // 0.5 vCPU
+        memoryLimitMiB: 1024, // 1 GB
+        taskRole,
+        runtimePlatform: {
+          cpuArchitecture: ecs.CpuArchitecture.X86_64,
+          operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+        },
+      },
+    );
+
+    // コンテナの追加 (worker)
+    taskDefinition.addContainer('WorkerContainer', {
+      containerName: 'worker',
+      image: ecs.ContainerImage.fromDockerImageAsset(workerImageAsset),
+      essential: true,
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'ecs',
+        logGroup,
+      }),
+      // JSONで指定されていた環境変数をセット
+      environment: {
+        NODE_ENV: 'production',
+        S3_BUCKET: 'pengovr-storage',
+        REDIS_HOST: instance.instancePrivateIp,
+        QUEUE_NAME: 'scraping-tasks',
+        ENRICHMENT_QUEUE: 'enrichment-tasks',
+        S3_ACCESS_KEY: accessKey.accessKeyId,
+        S3_SECRET_KEY: accessKey.secretAccessKey.unsafeUnwrap(),
+      },
+    });
+
+    // Fargate サービス (pengovr-worker-service)
+    const fargateService = new ecs.FargateService(this, 'WorkerService', {
+      serviceName: 'pengovr-worker-service',
+      cluster,
+      taskDefinition,
+      desiredCount: 1,
+      assignPublicIp: true,
+      circuitBreaker: {
+        rollback: true, // 自動ロールバック有効化
+      },
+      minHealthyPercent: 100,
+      maxHealthyPercent: 200,
     });
   }
 }
