@@ -57,8 +57,12 @@
             </tr>
           </InfoTable>
 
-          <h3 class="text-sm font-bold opacity-50 uppercase mt-6 mb-2">Scraping Options</h3>
-          <InfoTable v-if="webpage.option && Object.keys(webpage.option).length">
+          <h3 class="text-sm font-bold opacity-50 uppercase mt-6 mb-2">
+            Scraping Options
+          </h3>
+          <InfoTable
+            v-if="webpage.option && Object.keys(webpage.option).length"
+          >
             <template v-for="(value, key) in webpage.option" :key="key">
               <tr v-if="value">
                 <th class="w-1/4 opacity-60 uppercase text-sm">{{ key }}</th>
@@ -75,7 +79,11 @@
               :src="`data:image/png;base64,${webpage.thumbnail}`"
               alt="Thumbnail"
               class="max-w-full h-auto rounded border border-base-300 shadow-sm cursor-pointer hover:border-primary transition-all block mx-auto"
-              @click="openScreenshotsModal(webpage.screenshot?._id || webpage.screenshot)"
+              @click="
+                openScreenshotsModal(
+                  webpage.screenshot?._id || webpage.screenshot,
+                )
+              "
             />
           </div>
 
@@ -86,27 +94,35 @@
                 :key="screenshot.full?._id || screenshot._id"
                 class="screenshot-item"
               >
-                <div class="text-sm opacity-50 font-bold uppercase text-center">#{{ index }}</div>
+                <div class="text-sm opacity-50 font-bold uppercase text-center">
+                  #{{ index }}
+                </div>
                 <img
                   :src="getThumbnailUrl(screenshot.thumbnail)"
                   alt="Screenshot"
                   class="w-full h-16 object-cover rounded border border-base-300 cursor-pointer hover:border-primary transition-colors"
                   @click="
-                    openScreenshotsModal(screenshot.full?._id || screenshot.full || screenshot._id)
+                    openScreenshotsModal(
+                      screenshot.full?._id || screenshot.full || screenshot._id,
+                    )
                   "
                 />
               </div>
             </div>
           </div>
 
-          <h3 class="text-sm font-bold opacity-50 uppercase mt-4 mb-2">Analysis Result</h3>
+          <h3 class="text-sm font-bold opacity-50 uppercase mt-4 mb-2">
+            Analysis Result
+          </h3>
           <InfoTable>
             <tr>
               <th class="w-1/6 opacity-60">URL</th>
               <td class="break-all text-sm">
                 <span
                   :class="
-                    webpage.url && webpage.url !== webpage.input ? 'text-warning font-semibold' : ''
+                    webpage.url && webpage.url !== webpage.input
+                      ? 'text-warning font-semibold'
+                      : ''
                   "
                 >
                   {{ displayUrl(webpage.url) }}
@@ -120,7 +136,10 @@
             <tr>
               <th class="opacity-60">Status</th>
               <td>
-                <span :class="getStatusClass(webpage.status)" class="badge text-white">
+                <span
+                  :class="getStatusClass(webpage.status)"
+                  class="badge text-white"
+                >
                   {{ webpage.status || '???' }}
                 </span>
               </td>
@@ -137,7 +156,10 @@
             class="mt-6 pt-4 border-t border-base-300 flex items-center gap-4"
           >
             <span class="text-sm font-bold opacity-50 uppercase">HAR File</span>
-            <button @click="downloadHarFile" class="btn btn-sm btn-outline btn-error">
+            <button
+              @click="downloadHarFile"
+              class="btn btn-sm btn-outline btn-error"
+            >
               Download (.zip / infected)
             </button>
           </div>
@@ -196,7 +218,9 @@
               </button>
               <button class="join-item btn btn-xs no-animation cursor-default">
                 Page {{ requestPage }} / {{ totalRequestPages }}
-                <span class="opacity-50 ml-1">({{ filteredMatchedRequests.length }} items)</span>
+                <span class="opacity-50 ml-1"
+                  >({{ filteredMatchedRequests.length }} items)</span
+                >
               </button>
               <button
                 class="join-item btn btn-xs"
@@ -258,8 +282,13 @@
                 >
                   {{ displayUrl(item.request?.url || item.response?.url, 200) }}
                 </div>
-                <div v-if="item.request" class="flex items-center gap-2 opacity-80 text-sm">
-                  <span> {{ item.request.method }} {{ item.request.resourceType }} </span>
+                <div
+                  v-if="item.request"
+                  class="flex items-center gap-2 opacity-80 text-sm"
+                >
+                  <span>
+                    {{ item.request.method }} {{ item.request.resourceType }}
+                  </span>
                   <span
                     v-if="item.request?.failure?.errorText"
                     class="badge badge-error badge-sm text-white font-bold"
@@ -297,7 +326,10 @@
             </td>
             <td>
               <div class="flex flex-col gap-1">
-                <div v-if="item.response?.yara?.rules?.length" class="flex flex-wrap gap-1">
+                <div
+                  v-if="item.response?.yara?.rules?.length"
+                  class="flex flex-wrap gap-1"
+                >
                   <span
                     v-for="rule in item.response.yara.rules"
                     :key="rule.id"
@@ -327,7 +359,7 @@
         :target-id="webpage._id"
         target-type="webpage"
         :saved-yara="webpage.yara"
-        :gemini-explanation="webpage.geminiExplanation"
+        :ai-explanation="webpage.aiExplanation"
         :payloads="webpage.payloads"
         class="mb-12"
       />
@@ -428,7 +460,9 @@ export default {
           // 1. interceptionIdで一致を確認
           if (request.interceptionId && this.webpage.responses) {
             matchedResponse = this.webpage.responses.find(
-              (r) => r.interceptionId === request.interceptionId && !usedResponses.has(r._id),
+              (r) =>
+                r.interceptionId === request.interceptionId &&
+                !usedResponses.has(r._id),
             );
           }
 
@@ -466,7 +500,8 @@ export default {
     },
     filteredMatchedRequests() {
       const matched = this.matchedRequests;
-      if (!this.filterIp && !this.filterText && !this.filterNavigationOnly) return matched;
+      if (!this.filterIp && !this.filterText && !this.filterNavigationOnly)
+        return matched;
 
       const ipLower = this.filterIp.toLowerCase();
       const textLower = this.filterText.toLowerCase();
@@ -474,22 +509,34 @@ export default {
       return matched.filter((item) => {
         const ip = item.response?.remoteAddress?.ip || '';
         const body = item.response?.text || '';
-        const url = (item.request?.url || item.response?.url || '').toLowerCase();
+        const url = (
+          item.request?.url ||
+          item.response?.url ||
+          ''
+        ).toLowerCase();
 
         const matchesIp = !this.filterIp || ip.toLowerCase().includes(ipLower);
         const matchesText =
-          !this.filterText || body.toLowerCase().includes(textLower) || url.includes(textLower);
-        const matchesNavigation = !this.filterNavigationOnly || !!item.request?.isNavigationRequest;
+          !this.filterText ||
+          body.toLowerCase().includes(textLower) ||
+          url.includes(textLower);
+        const matchesNavigation =
+          !this.filterNavigationOnly || !!item.request?.isNavigationRequest;
 
         return matchesIp && matchesText && matchesNavigation;
       });
     },
     totalRequestPages() {
-      return Math.ceil(this.filteredMatchedRequests.length / this.requestLimit) || 1;
+      return (
+        Math.ceil(this.filteredMatchedRequests.length / this.requestLimit) || 1
+      );
     },
     paginatedRequests() {
       const start = (this.requestPage - 1) * this.requestLimit;
-      return this.filteredMatchedRequests.slice(start, start + this.requestLimit);
+      return this.filteredMatchedRequests.slice(
+        start,
+        start + this.requestLimit,
+      );
     },
   },
   watch: {
@@ -502,7 +549,9 @@ export default {
       handler(newVal) {
         if (newVal) {
           this.$nextTick(() => {
-            const scrollY = parseInt(sessionStorage.getItem('webpageDetailScrollY') || '0');
+            const scrollY = parseInt(
+              sessionStorage.getItem('webpageDetailScrollY') || '0',
+            );
             if (scrollY > 100) {
               // 小さなスクロールなら即表示
               console.log('Restoring scroll position:', scrollY);
@@ -559,7 +608,10 @@ export default {
 
         // Check if screenshots are properly populated
         if (this.webpage.screenshots?.length > 0) {
-          console.log('First screenshot full field:', this.webpage.screenshots[0].full);
+          console.log(
+            'First screenshot full field:',
+            this.webpage.screenshots[0].full,
+          );
           //console.log('First screenshot full.screenshot:', this.webpage.screenshots[0].full?.screenshot);
         }
 
@@ -587,7 +639,10 @@ export default {
         if (!this.webpage?.input) return;
         console.log('Fetching website for URL:', this.webpage.input);
         try {
-          const b64input = btoa(this.webpage.input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          const b64input = btoa(this.webpage.input)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
           this.website = await websiteApi.getWebsiteByUrl(b64input);
           console.log('Website data received:', this.website);
         } catch (e) {
@@ -604,25 +659,33 @@ export default {
     },
     getStatusClass(status) {
       const base = 'badge badge-md font-bold ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';
       return base + 'badge-ghost';
     },
     openScreenshotsModal(screenshotId) {
-      console.log('WebpageDetail openScreenshotsModal called with ID:', screenshotId);
+      console.log(
+        'WebpageDetail openScreenshotsModal called with ID:',
+        screenshotId,
+      );
 
       // Debug: Check which screenshot object this ID belongs to
       const foundScreenshot = this.webpage.screenshots?.find(
-        (ss) => ss.full?._id?.toString() === screenshotId || ss._id?.toString() === screenshotId,
+        (ss) =>
+          ss.full?._id?.toString() === screenshotId ||
+          ss._id?.toString() === screenshotId,
       );
 
       if (foundScreenshot) {
         console.log('Found screenshot object:', {
           _id: foundScreenshot._id,
           full: foundScreenshot.full?._id,
-          fullScreenshot: foundScreenshot.full?.screenshot ? 'present' : 'missing',
+          fullScreenshot: foundScreenshot.full?.screenshot
+            ? 'present'
+            : 'missing',
         });
       } else {
         console.warn('Screenshot object not found for ID:', screenshotId);
@@ -653,10 +716,14 @@ export default {
       }
 
       try {
-        const response = await fetch(`/api/webpages/${this.webpage._id}/harfile`);
+        const response = await fetch(
+          `/api/webpages/${this.webpage._id}/harfile`,
+        );
 
         if (!response.ok) {
-          throw new Error(`Failed to download HAR file: ${response.statusText}`);
+          throw new Error(
+            `Failed to download HAR file: ${response.statusText}`,
+          );
         }
 
         const blob = await response.blob();

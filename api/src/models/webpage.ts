@@ -1,8 +1,4 @@
-import mongoose, {
-  Schema,
-  InferSchemaType,
-  model,
-} from 'mongoose';
+import mongoose, { Schema, InferSchemaType, model } from 'mongoose';
 
 const webpageSchema = new Schema(
   {
@@ -44,9 +40,9 @@ const webpageSchema = new Schema(
       bgp: { type: [Object] },
       whois: { type: String },
       geoip: { type: [Object] },
-      dns: { 
+      dns: {
         domain: { type: String },
-        records: { 
+        records: {
           A: [{ type: String }],
           AAAA: [{ type: String }],
           MX: [{ type: Object }],
@@ -54,10 +50,10 @@ const webpageSchema = new Schema(
           TXT: [{ type: String }],
           CNAME: [{ type: String }],
           SOA: { type: Object },
-          PTR: [{ type: String }]
+          PTR: [{ type: String }],
         },
         lookupTime: { type: Number },
-        errors: [{ type: String }]
+        errors: [{ type: String }],
       },
     },
     headers: {
@@ -76,7 +72,7 @@ const webpageSchema = new Schema(
     yara: {
       type: Object,
     },
-    geminiExplanation: {
+    aiExplanation: {
       type: String,
     },
     requests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Request' }],
@@ -110,9 +106,6 @@ webpageSchema.index({ content: 'text' });
 webpageSchema.index({ input: 1, createdAt: -1 });
 webpageSchema.index({ 'yara.rules.id': 1 });
 
-const WebpageModel = model<webpageModelType>(
-  'Webpage',
-  webpageSchema,
-);
+const WebpageModel = model<webpageModelType>('Webpage', webpageSchema);
 export default WebpageModel;
 export { webpageModelType };

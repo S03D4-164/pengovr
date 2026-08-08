@@ -89,6 +89,7 @@ services:
       - VTKEY=${VTKEY}
       - GSBKEY=${GSBKEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK}
     tty: true
     init: true
     volumes:

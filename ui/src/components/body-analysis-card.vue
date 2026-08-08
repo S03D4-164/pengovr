@@ -30,12 +30,20 @@
         </button>
         <div class="flex gap-2">
           <button
-            @click="explainWithGemini"
+            @click="aiExplain('gemini')"
             class="btn btn-sm btn-info btn-outline"
-            :disabled="geminiLoading"
+            :disabled="aiExplainLoading"
           >
-            {{ geminiLoading ? 'Queuing...' : 'Gemini' }}
+            {{ aiExplainLoading ? 'Queuing...' : 'Gemini' }}
           </button>
+          <button
+            @click="aiExplain('bedrock')"
+            class="btn btn-sm btn-info btn-outline"
+            :disabled="aiExplainLoading"
+          >
+            {{ aiExplainLoading ? 'Queuing...' : 'Bedrock' }}
+          </button>
+
           <button
             @click="scanWithYara"
             class="btn btn-sm btn-accent btn-outline"
@@ -56,23 +64,20 @@
     <!-- Analysis Panels -->
     <div
       v-if="
-        yaraResults ||
-        effectiveGeminiExplanation ||
-        savedYara ||
-        payloads?.length
+        yaraResults || effectiveAiExplanation || savedYara || payloads?.length
       "
       class="space-y-4 mb-4"
     >
-      <!-- Gemini Result -->
+      <!-- AI Result -->
       <div
-        v-if="effectiveGeminiExplanation"
+        v-if="effectiveAiExplanation"
         class="bg-info/10 border border-info/20 rounded p-4 text-sm italic leading-relaxed"
       >
         <h4 class="font-bold mb-1 opacity-70 uppercase tracking-wider text-sm">
-          Gemini Explanation
+          AI Explanation
         </h4>
         <pre class="whitespace-pre-wrap font-sans text-info">{{
-          effectiveGeminiExplanation
+          effectiveAiExplanation
         }}</pre>
       </div>
 
@@ -170,7 +175,7 @@ export default {
     webpageId: { type: String, default: '' },
     targetType: { type: String, default: 'webpage' }, // 'webpage' or 'response'
     savedYara: { type: Object, default: null },
-    geminiExplanation: { type: String, default: '' },
+    aiExplanation: { type: String, default: '' },
     payloads: { type: Array, default: () => [] },
   },
   data() {
@@ -181,11 +186,11 @@ export default {
       yaraResults: null,
       yaraError: null,
       isScanning: false,
-      geminiLoading: false,
-      geminiMessage: '',
-      geminiTaskId: '',
-      geminiPollingInterval: null,
-      localGeminiExplanation: '',
+      aiExplainLoading: false,
+      aiExplainMessage: '',
+      aiExplainTaskId: '',
+      aiPollingInterval: null,
+      localAiExplanation: '',
       statusMessage: '',
     };
   },
@@ -205,16 +210,16 @@ export default {
       }
       return out;
     },
-    effectiveGeminiExplanation() {
+    effectiveAiExplanation() {
       // Use local state if available, otherwise use prop
-      return this.localGeminiExplanation || this.geminiExplanation;
+      return this.localAiExplanation || this.aiExplanation;
     },
   },
   beforeUnmount() {
     // Clean up polling when component is unmounted
-    if (this.geminiPollingInterval) {
-      clearInterval(this.geminiPollingInterval);
-      this.geminiPollingInterval = null;
+    if (this.aiPollingInterval) {
+      clearInterval(this.aiPollingInterval);
+      this.aiPollingInterval = null;
     }
   },
   methods: {
@@ -273,11 +278,12 @@ export default {
         this.isScanning = false;
       }
     },
-    async explainWithGemini() {
-      this.geminiLoading = true;
-      this.geminiMessage = '';
+    async aiExplain(api) {
+      this.aiExplainLoading = true;
+      this.aiExplainMessage = '';
       try {
-        const response = await fetch('/api/gemini/explain', {
+        console.log(`[BodyAnalysisCard] Requesting AI explanation with ${api}`);
+        const response = await fetch('/api/ai/explain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -285,66 +291,91 @@ export default {
             webpageId: this.webpageId || this.targetId,
             content: this.content,
             targetType: this.targetType,
+            ai: api,
           }),
         });
-        if (!response.ok) throw new Error('Failed to queue Gemini task');
+        if (!response.ok) throw new Error('Failed to queue AI task');
 
         const data = await response.json();
-        this.geminiTaskId = data.taskId;
-        this.geminiMessage = 'Task queued, waiting for result...';
-        this.statusMessage = 'Gemini task queued';
+        console.log(`[BodyAnalysisCard] Task queued with ID: ${data.taskId}`);
+        this.aiExplainTaskId = data.taskId;
+        this.aiExplainMessage = 'Task queued, waiting for result...';
+        this.statusMessage = 'AI task queued';
 
         // Start polling for result
-        this.pollGeminiResult(this.geminiTaskId);
+        this.pollAiResult(this.aiExplainTaskId);
       } catch (e) {
+        console.error(`[BodyAnalysisCard] AI explain error:`, e);
         this.statusMessage = 'Error: ' + e.message;
-        this.geminiMessage = '';
+        this.aiExplainMessage = '';
       } finally {
-        this.geminiLoading = false;
+        this.aiExplainLoading = false;
       }
     },
-    pollGeminiResult(taskId) {
+    pollAiResult(taskId) {
       // Clear any existing polling
-      if (this.geminiPollingInterval) {
-        clearInterval(this.geminiPollingInterval);
+      if (this.aiPollingInterval) {
+        clearInterval(this.aiPollingInterval);
       }
 
+      console.log(`[BodyAnalysisCard] Starting polling for task ${taskId}`);
+
       // Poll every 2 seconds
-      this.geminiPollingInterval = setInterval(async () => {
+      this.aiPollingInterval = setInterval(async () => {
         try {
-          // Poll using targetId and targetType
-          const result = await fetch(
-            `/api/gemini/result/${this.targetId}/${this.targetType}`,
-          ).then((res) => res.json());
+          console.log(`[BodyAnalysisCard] Polling: taskId=${taskId}`);
+
+          // First try polling by taskId (for raw content)
+          let result = await fetch(`/api/ai/result/${taskId}`).then((res) =>
+            res.json(),
+          );
+
+          // If no result by taskId, try fetching from document
+          if (!result || result.status === 'pending') {
+            result = await fetch(
+              `/api/ai/result/${this.targetId}/${this.targetType}`,
+            ).then((res) => res.json());
+          }
+
+          console.log(`[BodyAnalysisCard] Poll result:`, result);
 
           if (result.status === 'completed') {
-            clearInterval(this.geminiPollingInterval);
-            this.geminiPollingInterval = null;
+            console.log(`[BodyAnalysisCard] Task completed!`);
+            clearInterval(this.aiPollingInterval);
+            this.aiPollingInterval = null;
 
             if (result.explanation) {
-              this.localGeminiExplanation = result.explanation;
-              this.geminiMessage = '';
-              this.statusMessage = 'Gemini explanation completed';
+              this.localAiExplanation = result.explanation;
+              this.aiExplainMessage = '';
+              this.statusMessage = 'AI explanation completed';
+              console.log(
+                `[BodyAnalysisCard] Explanation set:`,
+                result.explanation.substring(0, 100),
+              );
               // Clear status message after 3 seconds
               setTimeout(() => (this.statusMessage = ''), 3000);
             } else if (result.error) {
-              this.geminiMessage = `Error: ${result.error}`;
+              this.aiExplainMessage = `Error: ${result.error}`;
+              console.error(`[BodyAnalysisCard] Task error:`, result.error);
             }
+          } else {
+            console.log(`[BodyAnalysisCard] Task still pending...`);
           }
           // If pending, continue polling
         } catch (err) {
-          console.error('Error polling Gemini result:', err);
+          console.error('[BodyAnalysisCard] Error polling AI result:', err);
         }
       }, 2000);
 
-      // Stop polling after 5 minutes
+      // Stop polling after 3 minutes
       setTimeout(() => {
-        if (this.geminiPollingInterval) {
-          clearInterval(this.geminiPollingInterval);
-          this.geminiPollingInterval = null;
-          this.geminiMessage = 'Polling timeout - check result manually';
+        if (this.aiPollingInterval) {
+          console.log(`[BodyAnalysisCard] Polling timeout for task ${taskId}`);
+          clearInterval(this.aiPollingInterval);
+          this.aiPollingInterval = null;
+          this.aiExplainMessage = 'Polling timeout - check result manually';
         }
-      }, 300000);
+      }, 180000);
     },
     copyToClipboard() {
       navigator.clipboard.writeText(this.displayContent).then(() => {

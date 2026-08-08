@@ -1,10 +1,10 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Deobfuscator</h1>
-
     <div class="flex flex-col lg:flex-row gap-6">
       <!-- Main Area -->
       <div class="flex-1 flex flex-col gap-4">
+        <h1 class="text-3xl font-bold mb-6">Deobfuscator</h1>
+
         <textarea
           v-model="inputText"
           class="textarea textarea-bordered w-full input-textarea font-mono text-sm"
@@ -28,12 +28,27 @@
       <!-- Sidebar -->
       <div class="flex flex-col gap-4 w-full lg:w-48 flex-shrink-0">
         <div>
-          <h3 class="text-sm font-bold opacity-50 uppercase tracking-wider mb-2">Beautify</h3>
+          <h3
+            class="text-sm font-bold opacity-50 uppercase tracking-wider mb-2"
+          >
+            Beautify
+          </h3>
           <div class="flex flex-col gap-2">
-            <button @click="beautify('script')" class="btn btn-outline btn-sm">JS</button>
-            <button @click="beautify('stylesheet')" class="btn btn-outline btn-sm">CSS</button>
-            <button @click="beautify('html')" class="btn btn-outline btn-sm">HTML</button>
-            <button @click="decodeBase64" class="btn btn-outline btn-sm">Base64</button>
+            <button @click="beautify('script')" class="btn btn-outline btn-sm">
+              JS
+            </button>
+            <button
+              @click="beautify('stylesheet')"
+              class="btn btn-outline btn-sm"
+            >
+              CSS
+            </button>
+            <button @click="beautify('html')" class="btn btn-outline btn-sm">
+              HTML
+            </button>
+            <button @click="decodeBase64" class="btn btn-outline btn-sm">
+              Base64
+            </button>
             <button
               @click="prettyPrint"
               class="btn btn-outline btn-sm"
@@ -45,7 +60,11 @@
         </div>
 
         <div>
-          <h3 class="text-sm font-bold opacity-50 uppercase tracking-wider mb-2">Analysis</h3>
+          <h3
+            class="text-sm font-bold opacity-50 uppercase tracking-wider mb-2"
+          >
+            Analysis
+          </h3>
           <div class="flex flex-col gap-2">
             <button
               @click="deobfuscateIo"
@@ -55,12 +74,20 @@
               Deobfuscate.io
             </button>
             <button
-              @click="explainWithGemini"
+              @click="aiExplain('gemini')"
               class="btn btn-outline btn-info btn-sm text-sm"
-              :disabled="geminiLoading || !inputText"
+              :disabled="aiExplainLoading || !inputText"
             >
-              {{ geminiLoading ? 'Queuing...' : 'Gemini' }}
+              {{ aiExplainLoading ? 'Queuing...' : 'Gemini' }}
             </button>
+            <button
+              @click="aiExplain('bedrock')"
+              class="btn btn-outline btn-info btn-sm text-sm"
+              :disabled="aiExplainLoading || !inputText"
+            >
+              {{ aiExplainLoading ? 'Queuing...' : 'Bedrock' }}
+            </button>
+
             <button
               @click="yaraScan"
               class="btn btn-outline btn-accent btn-sm text-sm"
@@ -68,7 +95,9 @@
             >
               YARA
             </button>
-            <button @click="reset" class="btn btn-outline btn-sm text-sm">Reset</button>
+            <button @click="reset" class="btn btn-outline btn-sm text-sm">
+              Reset
+            </button>
           </div>
         </div>
       </div>
@@ -79,15 +108,11 @@
         <pre class="whitespace-pre-wrap">{{ error }}</pre>
       </div>
 
-      <div v-if="geminiMessage" class="alert alert-success text-sm p-2 rounded shadow-sm">
-        {{ geminiMessage }}
-      </div>
-
-      <div v-if="geminiExplanation" class="card card-bordered bg-base-100 shadow-sm">
-        <div class="card-body p-4">
-          <h4 class="card-title text-sm opacity-70">Gemini Explanation</h4>
-          <pre class="bg-base-200 p-4 rounded text-sm leading-relaxed">{{ geminiExplanation }}</pre>
-        </div>
+      <div
+        v-if="aiExplainMessage"
+        class="alert alert-success text-sm p-2 rounded shadow-sm"
+      >
+        {{ aiExplainMessage }}
       </div>
     </div>
   </div>
@@ -99,7 +124,7 @@ import jsBeautify from 'js-beautify';
 import Prism from '../prism';
 import 'prismjs/themes/prism.css';
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
-import { geminiApi } from '../api';
+import { aiExplainApi } from '../api';
 import { initYara, scanContent } from '../utils/yara-utils';
 
 export default {
@@ -111,22 +136,22 @@ export default {
     const codeElement = ref(null);
     const loading = ref(false);
     const error = ref('');
-    const geminiLoading = ref(false);
-    const geminiMessage = ref('');
-    const geminiTaskId = ref('');
-    const geminiExplanation = ref('');
-    const geminiPollingInterval = ref(null);
+    const aiExplainLoading = ref(false);
+    const aiExplainMessage = ref('');
+    const aiExplainTaskId = ref('');
+    const aiExplanation = ref('');
+    const aiPollingInterval = ref(null);
 
     const reset = () => {
       resultText.value = '';
       isHighlightEnabled.value = false;
       error.value = '';
-      geminiMessage.value = '';
-      geminiExplanation.value = '';
-      geminiTaskId.value = '';
-      if (geminiPollingInterval.value) {
-        clearInterval(geminiPollingInterval.value);
-        geminiPollingInterval.value = null;
+      aiExplainMessage.value = '';
+      aiExplanation.value = '';
+      aiExplainTaskId.value = '';
+      if (aiPollingInterval.value) {
+        clearInterval(aiPollingInterval.value);
+        aiPollingInterval.value = null;
       }
     };
 
@@ -201,7 +226,9 @@ export default {
         isHighlightEnabled.value = false;
         nextTick(() => applyHighlighting());
       } catch (err) {
-        error.value = 'Decoding failed: ' + (err instanceof Error ? err.message : 'Invalid Base64');
+        error.value =
+          'Decoding failed: ' +
+          (err instanceof Error ? err.message : 'Invalid Base64');
         console.error('Base64 error:', err);
       }
     };
@@ -242,68 +269,92 @@ export default {
       }
     };
 
-    const pollGeminiResult = (taskId) => {
+    const pollAiResult = (taskId) => {
       // Clear any existing polling
-      if (geminiPollingInterval.value) {
-        clearInterval(geminiPollingInterval.value);
+      if (aiPollingInterval.value) {
+        clearInterval(aiPollingInterval.value);
       }
 
+      console.log(`Starting polling for task ${taskId}`);
+
       // Poll every 3 seconds
-      geminiPollingInterval.value = setInterval(async () => {
+      aiPollingInterval.value = setInterval(async () => {
         try {
-          const result = await geminiApi.getResult(taskId);
+          console.log(`Polling task ${taskId}...`);
+          const result = await aiExplainApi.getResult(taskId);
+          console.log(`Poll result:`, result);
 
           if (result.status === 'completed') {
-            clearInterval(geminiPollingInterval.value);
-            geminiPollingInterval.value = null;
+            console.log(`Task ${taskId} completed`);
+            clearInterval(aiPollingInterval.value);
+            aiPollingInterval.value = null;
 
             if (result.explanation) {
-              geminiExplanation.value = result.explanation;
-              geminiMessage.value = 'Explanation ready';
+              resultText.value = result.explanation;
+              aiExplanation.value = result.explanation;
+              aiExplainMessage.value = '';
+              isHighlightEnabled.value = false;
+              console.log('Explanation set successfully');
+
+              // Scroll to result section
+              nextTick(() => {
+                const resultDisplay = document.querySelector('.result-display');
+                if (resultDisplay) {
+                  resultDisplay.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  });
+                }
+              });
             } else if (result.error) {
-              geminiMessage.value = `Error: ${result.error}`;
+              aiExplainMessage.value = `Error: ${result.error}`;
+              console.error('Task returned error:', result.error);
             }
+          } else {
+            console.log(`Task ${taskId} still pending...`);
           }
           // If pending, continue polling
         } catch (err) {
-          console.error('Error polling Gemini result:', err);
+          console.error('Error polling AI result:', err);
         }
       }, 3000);
 
-      // Stop polling after 5 minutes
+      // Stop polling after 3 minutes
       setTimeout(() => {
-        if (geminiPollingInterval.value) {
-          clearInterval(geminiPollingInterval.value);
-          geminiPollingInterval.value = null;
-          geminiMessage.value = 'Polling timeout - check result manually';
+        if (aiPollingInterval.value) {
+          console.log(`Polling timeout for task ${taskId}`);
+          clearInterval(aiPollingInterval.value);
+          aiPollingInterval.value = null;
+          aiExplainMessage.value = 'Polling timeout - check result manually';
         }
-      }, 300000);
+      }, 180000);
     };
 
-    const explainWithGemini = async () => {
+    const aiExplain = async (ai) => {
       if (!inputText.value) {
         error.value = 'Please enter code to explain';
         return;
       }
 
-      geminiLoading.value = true;
-      geminiMessage.value = '';
-      geminiExplanation.value = '';
+      aiExplainLoading.value = true;
+      aiExplainMessage.value = '';
+      aiExplanation.value = '';
 
       try {
-        const result = await geminiApi.explainContent(inputText.value);
-        geminiTaskId.value = result.taskId;
-        geminiMessage.value = 'Gemini task queued, waiting for result...';
-        console.log('Gemini task queued:', result.taskId);
+        const result = await aiExplainApi.explainContent(inputText.value, ai);
+        aiExplainTaskId.value = result.taskId;
+        aiExplainMessage.value = 'AI task queued, waiting for result...';
+        console.log('AI task queued:', result.taskId);
 
         // Start polling for result
-        pollGeminiResult(result.taskId);
+        pollAiResult(result.taskId);
       } catch (err) {
-        console.error('Error queuing Gemini explanation:', err);
-        geminiMessage.value =
-          'Failed to queue: ' + (err instanceof Error ? err.message : 'Unknown error');
+        console.error('Error queuing AI explanation:', err);
+        aiExplainMessage.value =
+          'Failed to queue: ' +
+          (err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        geminiLoading.value = false;
+        aiExplainLoading.value = false;
       }
     };
 
@@ -337,8 +388,8 @@ export default {
     });
 
     onUnmounted(() => {
-      if (geminiPollingInterval.value) {
-        clearInterval(geminiPollingInterval.value);
+      if (aiPollingInterval.value) {
+        clearInterval(aiPollingInterval.value);
       }
     });
 
@@ -349,15 +400,15 @@ export default {
       codeElement,
       loading,
       error,
-      geminiLoading,
-      geminiMessage,
-      geminiExplanation,
+      aiExplainLoading,
+      aiExplainMessage,
+      aiExplanation,
       reset,
       beautify,
       decodeBase64,
       prettyPrint,
       deobfuscateIo,
-      explainWithGemini,
+      aiExplain,
       yaraScan,
     };
   },

@@ -68,7 +68,7 @@ export function initResultListeners(
       const gsbResult = await getJsonFromS3(s3Key);
       if (gsbResult) {
         await WebsiteModel.findByIdAndUpdate(gsbResult.websiteId, {
-          $set: { gsb: { lookup: gsbResult.gsb, lastLookup: new Date() } },
+          $set: { gsb: { lookup: gsbResult.gsb } },
         });
         console.log(
           `[ResultProcessor] MongoDB: GSB matches (${gsbResult.gsb.matches?.length || 0}) saved for Website ${gsbResult.websiteId}`,
@@ -291,7 +291,10 @@ export function initResultListeners(
         );
       }
       return;
-    } else if (job.name === 'gemini_explain') {
+    } else if (
+      job.name === 'gemini_explain' ||
+      job.name === 'bedrock_explain'
+    ) {
       let s3Key: string;
       if (job.data.targetType === 'response') {
         s3Key = `responses/${job.data.targetId}/explanations/${jobId}.txt`;
@@ -299,7 +302,7 @@ export function initResultListeners(
         s3Key = `webpages/${job.data.targetId}/explanations/${jobId}.txt`;
       } else {
         // deobfuscator or other types
-        s3Key = `explanations/gemini/content-${jobId}.txt`;
+        s3Key = `explanations/${job.name}/content-${jobId}.txt`;
       }
 
       const explanation = await s3Client
@@ -315,19 +318,19 @@ export function initResultListeners(
       if (explanation) {
         const targetId = job.data.targetId || job.data.webpageId;
         console.log(
-          `[ResultProcessor] MongoDB: Saving Gemini explanation to ${job.data.targetType} ${targetId}...`,
+          `[ResultProcessor] MongoDB: Saving ${job.name} explanation to ${job.data.targetType} ${targetId}...`,
         );
         if (job.data.targetType === 'response') {
           await ResponseModel.findByIdAndUpdate(targetId, {
-            geminiExplanation: explanation,
+            aiExplanation: explanation,
           });
         } else {
           await WebpageModel.findByIdAndUpdate(targetId, {
-            geminiExplanation: explanation,
+            aiExplanation: explanation,
           });
         }
         console.log(
-          `[ResultProcessor] MongoDB: Gemini explanation successfully saved.`,
+          `[ResultProcessor] MongoDB: ${job.name} explanation successfully saved.`,
         );
 
         // 説明をS3から削除
@@ -384,6 +387,15 @@ export function initResultListeners(
         }
         return;
       }
+    } else if (
+      ['gemini_explain_content', 'bedrock_explain_content'].includes(job.name)
+    ) {
+      // AI explanation for raw content is stored directly in Redis by enricher
+      // No additional processing needed here
+      console.log(
+        `[ResultProcessor] Job ${job.name} ${jobId} completed. Result stored in Redis.`,
+      );
+      return;
     }
 
     // どの結果ファイルも処理されなかった場合のログ

@@ -1,9 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 
 const apiKey = process.env.GEMINI_API_KEY;
+const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+
 const ai = new GoogleGenAI({ apiKey });
-const quota = 250000
-const limit = quota * 2
+const quota = 250000;
+const limit = quota * 2;
 
 let contents = `
 必ず日本語で回答してください。
@@ -15,18 +17,21 @@ contents += `
 以下のHTTPレスポンスボディの内容について、簡潔に説明してください。
 `;
 
-async function explainCode(code: string): Promise<string | null> {
+async function geminiExplain(code: string): Promise<string | null> {
   // Limit content to first 50000 characters to avoid token limit
-  const limitedCode = code.length > limit ? code.substring(0, limit) + '\n... (content truncated)' : code;
+  const limitedCode =
+    code.length > limit
+      ? code.substring(0, limit) + '\n... (content truncated)'
+      : code;
 
   const req = {
-    model: 'gemini-3.1-flash-lite-preview',
+    model,
     contents: contents + limitedCode,
   };
 
   const countTokensResponse = await ai.models.countTokens(req);
   console.log('Gemini token count:', countTokensResponse.totalTokens);
-  
+
   if (
     countTokensResponse?.totalTokens &&
     countTokensResponse.totalTokens > quota
@@ -35,11 +40,14 @@ async function explainCode(code: string): Promise<string | null> {
     console.error(errorMessage);
     return errorMessage;
   }
-  
+
   const result = await ai.models.generateContent(req);
   const explanation = result.text;
-  console.log('Gemini explanation generated:', explanation?.substring(0, 100) + '...');
+  console.log(
+    'Gemini explanation generated:',
+    explanation?.substring(0, 100) + '...',
+  );
   return explanation || null;
 }
 
-export default explainCode;
+export default geminiExplain;

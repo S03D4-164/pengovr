@@ -18,7 +18,7 @@ import payloadRoutes from './routes/payloads';
 import removeRoutes from './routes/remove';
 import screenshotRoutes from './routes/screenshots';
 import yaraRoutes from './routes/yaras';
-import geminiRoutes from './routes/gemini';
+import aiExplainRoutes from './routes/gemini';
 import userAgentsRoutes from './routes/userAgents';
 import ResultListener from './services/result-listener';
 import { initResultListeners } from './services/resultProcessor';
@@ -223,7 +223,7 @@ app.use('/api/payloads', payloadRoutes);
 app.use('/api/remove', removeRoutes);
 app.use('/api/screenshots', screenshotRoutes);
 app.use('/api/yaras', yaraRoutes);
-app.use('/api/gemini', geminiRoutes);
+app.use('/api/ai', aiExplainRoutes);
 app.use('/api/user-agents', userAgentsRoutes);
 app.use('/admin/queues', serverAdapter.getRouter());
 

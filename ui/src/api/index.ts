@@ -224,15 +224,19 @@ export const healthApi = {
   check: () => api.get('/health'),
 };
 
-export const geminiApi = {
-  explain: (webpageId: string, content: string) =>
-    api.post<{ message: string; taskId: string }>('/gemini/explain', {
+export type AiProvider = 'gemini' | 'bedrock';
+
+export const aiExplainApi = {
+  explain: (webpageId: string, content: string, ai: AiProvider) =>
+    api.post<{ message: string; taskId: string }>('/ai/explain', {
       webpageId,
       content,
+      ai,
     }),
-  explainContent: (content: string) =>
-    api.post<{ message: string; taskId: string }>('/gemini/explain-content', {
+  explainContent: (content: string, ai: AiProvider) =>
+    api.post<{ message: string; taskId: string }>('/ai/explain-content', {
       content,
+      ai,
     }),
   getResult: (taskId: string) =>
     api.get<{
@@ -240,7 +244,7 @@ export const geminiApi = {
       explanation?: string;
       error?: string;
       message?: string;
-    }>(`/gemini/result/${taskId}`),
+    }>(`/ai/result/${taskId}`),
 };
 
 export const userAgentApi = {

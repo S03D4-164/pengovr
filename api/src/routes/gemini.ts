@@ -7,10 +7,10 @@ const router: Router = express.Router();
 
 const ENRICHMENT_QUEUE = process.env.ENRICHMENT_QUEUE || 'enrichment-tasks';
 
-// POST /api/gemini/explain - Queue Gemini explanation task
+// POST /api/ai/explain - Queue AI explanation task
 router.post('/explain', async (req, res) => {
   try {
-    const { targetId, webpageId, content, targetType } = req.body;
+    const { targetId, webpageId, content, targetType, ai } = req.body;
     const enrichmentQueue = req.app.locals.enrichmentQueue;
 
     // targetId または webpageId のいずれかが必須
@@ -18,6 +18,13 @@ router.post('/explain', async (req, res) => {
       return res
         .status(400)
         .json({ error: 'targetId or webpageId is required' });
+    }
+
+    // ai parameter validation
+    if (!ai || !['gemini', 'bedrock'].includes(ai)) {
+      return res
+        .status(400)
+        .json({ error: 'ai must be "gemini" or "bedrock"' });
     }
 
     // WorkerはDBにアクセスできないため、API側でコンテンツを用意する
@@ -40,9 +47,11 @@ router.post('/explain', async (req, res) => {
         .json({ error: 'Content to explain could not be found or is empty.' });
     }
 
+    const taskType = ai === 'gemini' ? 'gemini_explain' : 'bedrock_explain';
+
     const task = {
       id: uuidv4(),
-      type: 'gemini_explain',
+      type: taskType,
       targetId: targetId || webpageId, // 解説対象のID (ResponseまたはWebpage)
       webpageId: webpageId, // 親WebpageのID (常にWebpageのID)
       targetType: targetType || 'webpage',
@@ -51,14 +60,14 @@ router.post('/explain', async (req, res) => {
     };
 
     // Add to enrichment queue
-    await enrichmentQueue.add('gemini_explain', task, { jobId: task.id });
+    await enrichmentQueue.add(taskType, task, { jobId: task.id });
 
     res.json({
-      message: 'Gemini explanation task queued',
+      message: 'AI explanation task queued',
       taskId: task.id,
     });
   } catch (error) {
-    console.error('Gemini queue error:', error);
+    console.error('AI queue error:', error);
     res.status(500).json({
       error: 'Failed to queue explanation task',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -66,33 +75,43 @@ router.post('/explain', async (req, res) => {
   }
 });
 
-// POST /api/gemini/explain-content - Queue Gemini explanation task for raw content
+// POST /api/ai/explain-content - Queue AI explanation task for raw content
 router.post('/explain-content', async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, ai } = req.body;
     const enrichmentQueue = req.app.locals.enrichmentQueue;
 
     if (!content) {
       return res.status(400).json({ error: 'content is required' });
     }
 
+    // ai parameter validation
+    if (!ai || !['gemini', 'bedrock'].includes(ai)) {
+      return res
+        .status(400)
+        .json({ error: 'ai must be "gemini" or "bedrock"' });
+    }
+
+    const taskType =
+      ai === 'gemini' ? 'gemini_explain_content' : 'bedrock_explain_content';
+
     // Create enrichment task with raw content
     const task = {
       id: uuidv4(),
-      type: 'gemini_explain_content',
+      type: taskType,
       content: content.substring(0, 100000), // Limit content size
       timestamp: new Date().toISOString(),
     };
 
     // Add to enrichment queue
-    await enrichmentQueue.add('gemini_explain_content', task);
+    await enrichmentQueue.add(taskType, task);
 
     res.json({
-      message: 'Gemini explanation task queued',
+      message: 'AI explanation task queued',
       taskId: task.id,
     });
   } catch (error) {
-    console.error('Gemini queue error:', error);
+    console.error('AI queue error:', error);
     res.status(500).json({
       error: 'Failed to queue explanation task',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -100,7 +119,7 @@ router.post('/explain-content', async (req, res) => {
   }
 });
 
-// GET /api/gemini/result/:taskId - Get Gemini explanation result
+// GET /api/ai/result/:taskId - Get AI explanation result
 router.get('/result/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
@@ -110,8 +129,8 @@ router.get('/result/:taskId', async (req, res) => {
       return res.status(400).json({ error: 'taskId is required' });
     }
 
-    // Get result from Redis
-    const result = await redis.get(`gemini:result:${taskId}`);
+    // Get result from Redis (key format: aiexplain:result:${taskId})
+    const result = await redis.get(`aiexplain:result:${taskId}`);
 
     if (!result) {
       return res.json({
@@ -123,7 +142,7 @@ router.get('/result/:taskId', async (req, res) => {
     const parsedResult = JSON.parse(result);
     res.json({ status: 'completed', ...parsedResult });
   } catch (error) {
-    console.error('Gemini result error:', error);
+    console.error('AI result error:', error);
     res.status(500).json({
       error: 'Failed to get explanation result',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -131,7 +150,7 @@ router.get('/result/:taskId', async (req, res) => {
   }
 });
 
-// GET /api/gemini/result/:targetId/:targetType - Get Gemini explanation from document
+// GET /api/ai/result/:targetId/:targetType - Get AI explanation from document
 router.get('/result/:targetId/:targetType', async (req, res) => {
   try {
     const { targetId, targetType } = req.params;
@@ -154,16 +173,16 @@ router.get('/result/:targetId/:targetType', async (req, res) => {
       return res.status(404).json({ error: `${targetType} not found` });
     }
 
-    if (document.geminiExplanation) {
+    if (document.aiExplanation) {
       res.json({
         status: 'completed',
-        explanation: document.geminiExplanation,
+        explanation: document.aiExplanation,
       });
     } else {
       res.json({ status: 'pending', message: 'Explanation not yet available' });
     }
   } catch (error) {
-    console.error('Gemini result error:', error);
+    console.error('AI result error:', error);
     res.status(500).json({
       error: 'Failed to get explanation result',
       message: error instanceof Error ? error.message : 'Unknown error',

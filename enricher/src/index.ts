@@ -14,7 +14,8 @@ import { getHostInfo } from './utils/ipInfo.js';
 import { getDNSInfo } from './utils/dns.js';
 import { analyzePage, analyzeResponses } from './utils/wappalyzer.js';
 import { yaraAction } from './utils/yara.js';
-import explainCode from './utils/gemini.js';
+import geminiExplain from './utils/gemini.js';
+import bedrockExplain from './utils/bedrock.js';
 import { vt } from './utils/vt.js';
 import { lookupUrl } from './utils/gsblookup.js';
 
@@ -302,21 +303,30 @@ class EnrichmentWorker {
       return;
     }
 
-    // Handle Gemini explanation task
-    if (taskType === 'gemini_explain') {
+    // Handle AI explanation task
+    if (['gemini_explain', 'bedrock_explain'].includes(taskType)) {
       const targetId = data.targetId || webpageId;
-      await this.processGeminiExplainTask(
+      const api = taskType === 'gemini_explain' ? 'gemini' : 'bedrock';
+
+      await this.processAIExplainTask(
         taskId,
         targetId,
         targetType || 'webpage',
         taskContent,
+        api,
       );
       return;
     }
 
     // Handle Gemini explanation for raw content
     if (taskType === 'gemini_explain_content') {
-      await this.processGeminiExplainContentTask(taskId, taskContent);
+      await this.processAIExplainContentTask(taskId, taskContent, 'gemini');
+      return;
+    }
+
+    // Handle Bedrock explanation for raw content
+    if (taskType === 'bedrock_explain_content') {
+      await this.processAIExplainContentTask(taskId, taskContent, 'bedrock');
       return;
     }
 
@@ -432,31 +442,37 @@ class EnrichmentWorker {
     }
   }
 
-  async processGeminiExplainTask(
+  async processAIExplainTask(
     taskId: string,
     targetId: string,
     targetType: string,
     content: string | undefined,
+    api: string,
   ) {
     try {
       console.log(
-        `Processing Gemini explanation for task ${taskId}, ${targetType} ${targetId}`,
+        `Processing AI explanation for task ${taskId}, ${targetType} ${targetId}`,
       );
 
       // API接続禁止のため、コンテンツはジョブデータから直接取得する
       const contentToExplain = content;
       if (!contentToExplain) {
         console.error(
-          `Gemini explain task ${taskId}: no content available (not provided and ${targetType} has no content)`,
+          `AI explain task ${taskId}: no content available (not provided and ${targetType} has no content)`,
         );
         return;
       }
 
+      let explanation;
       // Generate explanation using Gemini
-      const explanation = await explainCode(contentToExplain);
+      if (api == 'gemini') {
+        explanation = await geminiExplain(contentToExplain);
+      } else if (api == 'bedrock') {
+        explanation = await bedrockExplain(contentToExplain);
+      }
 
       if (explanation) {
-        // 結果をMinIOに保存
+        // 結果をS3に保存
         let storageKey: string;
         if (targetType === 'response') {
           storageKey = `responses/${targetId}/explanations/${taskId}.txt`;
@@ -495,29 +511,31 @@ class EnrichmentWorker {
     }
   }
 
-  async processGeminiExplainContentTask(
+  async processAIExplainContentTask(
     taskId: string,
     content: string | undefined,
+    api: string,
   ) {
     try {
-      console.log(
-        `Processing Gemini explanation for raw content, task ${taskId}`,
-      );
+      console.log(`Processing AI explanation for raw content, task ${taskId}`);
 
       if (!content) {
-        console.error(
-          `Gemini explain content task ${taskId}: no content provided`,
-        );
+        console.error(`AI explain content task ${taskId}: no content provided`);
         await this.redis.setex(
-          `gemini:result:${taskId}`,
+          `aiexplain:result:${taskId}`,
           3600,
           JSON.stringify({ error: 'No content provided' }),
         );
         return;
       }
 
+      let explanation;
       // Generate explanation using Gemini
-      const explanation = await explainCode(content);
+      if (api == 'gemini') {
+        explanation = await geminiExplain(content);
+      } else if (api == 'bedrock') {
+        explanation = await bedrockExplain(content);
+      }
 
       // Save result to Redis with 1 hour expiration
       const result = explanation
@@ -525,22 +543,22 @@ class EnrichmentWorker {
         : { error: 'No explanation generated', status: 'failed' };
 
       await this.redis.setex(
-        `gemini:result:${taskId}`,
+        `aiexplain:result:${taskId}`,
         3600,
         JSON.stringify(result),
       );
-      console.log(`Gemini explanation saved to Redis for task ${taskId}`);
+      console.log(`AI explanation saved to Redis for task ${taskId}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
       console.error(
-        `Error processing Gemini explanation for task ${taskId}:`,
+        `Error processing AI explanation for task ${taskId}:`,
         error,
       );
 
       // Save error to Redis
       await this.redis.setex(
-        `gemini:result:${taskId}`,
+        `aiexplain:result:${taskId}`,
         3600,
         JSON.stringify({ error: errorMessage, status: 'failed' }),
       );

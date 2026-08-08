@@ -1,8 +1,4 @@
-import mongoose, {
-  Schema,
-  InferSchemaType,
-  model,
-} from 'mongoose';
+import mongoose, { Schema, InferSchemaType, model } from 'mongoose';
 
 const responseSchema = new Schema(
   {
@@ -36,9 +32,9 @@ const responseSchema = new Schema(
       reverse: { type: [String] },
       bgp: { type: [Object] },
       geoip: { type: [Object] },
-      dns: { 
+      dns: {
         domain: { type: String },
-        records: { 
+        records: {
           A: [{ type: String }],
           AAAA: [{ type: String }],
           MX: [{ type: Object }],
@@ -46,10 +42,10 @@ const responseSchema = new Schema(
           TXT: [{ type: String }],
           CNAME: [{ type: String }],
           SOA: { type: Object },
-          PTR: [{ type: String }]
+          PTR: [{ type: String }],
         },
         lookupTime: { type: Number },
-        errors: [{ type: String }]
+        errors: [{ type: String }],
       },
     },
     headers: {
@@ -75,7 +71,7 @@ const responseSchema = new Schema(
     interceptionId: {
       type: String,
     },
-    geminiExplanation: {
+    aiExplanation: {
       type: String,
     },
     webpage: { type: mongoose.Schema.Types.ObjectId, ref: 'Webpage' },
