@@ -2,6 +2,7 @@ import { QueueEvents, Queue } from 'bullmq';
 import {
   GetObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import s3Client, { downloadBuffer } from '../utils/s3'; // 共通のクライアントをインポート
@@ -227,62 +228,52 @@ export function initResultListeners(
       }
 
       if (!keeps3) {
-        if (job.data.resultKey) {
-          console.log(
-            `[ResultProcessor] All enrichment sub-tasks completed. Cleaning up source: ${job.data.resultKey}`,
-          );
-          await s3Client
-            .send(
-              new DeleteObjectCommand({
-                Bucket: config.s3.bucket,
-                Key: job.data.resultKey,
-              }),
-            )
-            .catch((err) =>
-              console.warn(`[ResultProcessor] Cleanup failed: ${err.message}`),
-            );
-        }
+        console.log(
+          `[ResultProcessor] All enrichment sub-tasks completed. Cleaning up entire webpage directory for ${webpageId}...`,
+        );
 
-        // Clean up payloads and screenshots under webpages/{webpageId}/
+        // Delete entire webpages/{webpageId}/ directory using batch delete
         if (webpageId) {
-          const prefixes = ['payloads', 'screenshots'];
-          for (const prefix of prefixes) {
-            const listPrefix = `webpages/${webpageId}/${prefix}/`;
-            try {
-              let continuationToken: string | undefined;
-              do {
-                const listResponse = await s3Client.send(
-                  new ListObjectsV2Command({
-                    Bucket: config.s3.bucket,
-                    Prefix: listPrefix,
-                    ContinuationToken: continuationToken,
-                  }),
-                );
+          const webpagePrefix = `webpages/${webpageId}/`;
+          try {
+            let continuationToken: string | undefined;
+            let deletedCount = 0;
 
-                if (listResponse.Contents) {
-                  for (const obj of listResponse.Contents) {
-                    if (obj.Key) {
-                      await s3Client.send(
-                        new DeleteObjectCommand({
-                          Bucket: config.s3.bucket,
-                          Key: obj.Key,
-                        }),
-                      );
-                    }
-                  }
+            do {
+              const listResponse = await s3Client.send(
+                new ListObjectsV2Command({
+                  Bucket: config.s3.bucket,
+                  Prefix: webpagePrefix,
+                  ContinuationToken: continuationToken,
+                }),
+              );
+
+              if (listResponse.Contents && listResponse.Contents.length > 0) {
+                const keysToDelete = listResponse.Contents.map((obj) => ({
+                  Key: obj.Key!,
+                })).filter((item) => item.Key);
+
+                if (keysToDelete.length > 0) {
+                  await s3Client.send(
+                    new DeleteObjectsCommand({
+                      Bucket: config.s3.bucket,
+                      Delete: { Objects: keysToDelete },
+                    }),
+                  );
+                  deletedCount += keysToDelete.length;
                 }
+              }
 
-                continuationToken = listResponse.NextContinuationToken;
-              } while (continuationToken);
+              continuationToken = listResponse.NextContinuationToken;
+            } while (continuationToken);
 
-              console.log(
-                `[ResultProcessor] Cleaned up ${prefix} for webpage ${webpageId}`,
-              );
-            } catch (err: any) {
-              console.warn(
-                `[ResultProcessor] Failed to cleanup ${prefix} for webpage ${webpageId}: ${err.message}`,
-              );
-            }
+            console.log(
+              `[ResultProcessor] Deleted entire webpage directory for ${webpageId} (${deletedCount} files)`,
+            );
+          } catch (err: any) {
+            console.warn(
+              `[ResultProcessor] Failed to cleanup webpage directory for ${webpageId}: ${err.message}`,
+            );
           }
         }
       } else {

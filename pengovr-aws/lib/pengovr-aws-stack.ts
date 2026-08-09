@@ -71,7 +71,6 @@ export class PengovrAwsStack extends cdk.Stack {
       allowAllOutbound: true, // アウトバウンド（送信）通信はすべて許可
     });
 
-    // MY_IP=$(curl -s https://checkip.amazonaws.com) cdk deployのようにデプロイする必要がある
     const myIp = process.env.MY_IP;
     if (myIp) {
       securityGroup.addIngressRule(
@@ -137,8 +136,8 @@ METRIC_NAME="WaitingJobCount"
 NAMESPACE="BullMQ/Metrics"
 REGION="us-east-1"
 
-WAITING=$(valkey-cli llen "bull:${QUEUE_NAME}:wait" 2>/dev/null || echo 0)
-ACTIVE=$(valkey-cli llen "bull:${QUEUE_NAME}:active" 2>/dev/null || echo 0)
+WAITING=$(valkey-cli llen "bull:$QUEUE_NAME:wait" 2>/dev/null || echo 0)
+ACTIVE=$(valkey-cli llen "bull:$QUEUE_NAME:active" 2>/dev/null || echo 0)
 
 TOTAL_COUNT=$((WAITING + ACTIVE))
 
@@ -150,6 +149,7 @@ EOF`,
       'chmod +x /usr/local/bin/send_bullmq_metrics.sh',
 
       'echo "* * * * * /usr/local/bin/send_bullmq_metrics.sh" | crontab -',
+      'systemctl start crond.service',
     );
 
     // 出力設定：EC2のパブリックIPアドレスを表示
@@ -238,7 +238,7 @@ EOF`,
       serviceName: 'pengovr-worker-service',
       cluster,
       taskDefinition,
-      desiredCount: 1,
+      desiredCount: 0,
       assignPublicIp: true,
       circuitBreaker: {
         rollback: true, // 自動ロールバック有効化
@@ -250,7 +250,7 @@ EOF`,
     // スケーリングの対象と範囲を設定
     const scalableTarget = fargateService.autoScaleTaskCount({
       minCapacity: 0,
-      maxCapacity: 2,
+      maxCapacity: 5,
     });
 
     // CloudWatch カスタムメトリクスを定義
@@ -261,7 +261,7 @@ EOF`,
         QueueName: 'scraping-tasks',
       },
       statistic: 'Average',
-      period: cdk.Duration.minutes(1),
+      period: cdk.Duration.seconds(30),
     });
 
     // スケールアウト（増設）用 Step Scaling ポリシー
@@ -269,8 +269,8 @@ EOF`,
       metric: queueLengthMetric,
       scalingSteps: [
         { upper: 0, change: 0 }, // 0件: 0台
-        { lower: 1, upper: 2, change: 1 }, // 1件: 1台
-        { lower: 2, change: 2 }, // 2件以上: 2台（最大）
+        { lower: 1, upper: 5, change: 1 }, // 1件: 1台
+        { lower: 5, change: 5 }, // 5件以上: 5台（最大）
       ],
       // ExactCapacity: scalingSteps の change の値を「全体のタスク台数」として直接適用
       adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,

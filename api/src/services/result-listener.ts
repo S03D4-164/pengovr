@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import config from '../config';
 import zlib from 'zlib';
 import s3Client, { downloadBuffer } from '../utils/s3';
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import WebpageModel from '../models/webpage';
 import WebsiteModel from '../models/website';
 import mongoose from 'mongoose';
@@ -355,18 +355,51 @@ export class ResultListener {
           console.log(
             `[ResultListener] Skipping specialized enrichment tasks (yara, wappalyzer, dns) for Webpage ${webpageId} as noenrich option is enabled.`,
           );
-          if (resultKey && !webpageData.option?.keeps3) {
+          if (!webpageData.option?.keeps3) {
             console.log(`[ResultListener] Cleaning up source: ${resultKey}`);
-            await s3Client
-              .send(
-                new DeleteObjectCommand({
-                  Bucket: config.s3.bucket,
-                  Key: resultKey,
-                }),
-              )
-              .catch((err) =>
-                console.warn(`[ResultListener] Cleanup failed: ${err.message}`),
+
+            // Delete entire webpages/{webpageId}/ directory using batch delete
+            const webpagePrefix = `webpages/${webpageId}/`;
+            try {
+              let continuationToken: string | undefined;
+              let deletedCount = 0;
+
+              do {
+                const listResponse = await s3Client.send(
+                  new ListObjectsV2Command({
+                    Bucket: config.s3.bucket,
+                    Prefix: webpagePrefix,
+                    ContinuationToken: continuationToken,
+                  }),
+                );
+
+                if (listResponse.Contents && listResponse.Contents.length > 0) {
+                  const keysToDelete = listResponse.Contents.map((obj) => ({
+                    Key: obj.Key!,
+                  })).filter((item) => item.Key);
+
+                  if (keysToDelete.length > 0) {
+                    await s3Client.send(
+                      new DeleteObjectsCommand({
+                        Bucket: config.s3.bucket,
+                        Delete: { Objects: keysToDelete },
+                      }),
+                    );
+                    deletedCount += keysToDelete.length;
+                  }
+                }
+
+                continuationToken = listResponse.NextContinuationToken;
+              } while (continuationToken);
+
+              console.log(
+                `[ResultListener] Deleted entire webpage directory for ${webpageId} (${deletedCount} files)`,
               );
+            } catch (err: any) {
+              console.warn(
+                `[ResultListener] Failed to cleanup webpage directory for ${webpageId}: ${err.message}`,
+              );
+            }
           }
         } else {
           console.log(
