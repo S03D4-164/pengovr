@@ -1,313 +1,60 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as logs from 'aws-cdk-lib/aws-logs';
-import * as path from 'path';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
-import * as applicationautoscaling from 'aws-cdk-lib/aws-applicationautoscaling';
+import { StorageConstruct } from './constructs/storage-construct';
+import { NetworkConstruct } from './constructs/network-construct';
+import { CacheConstruct } from './constructs/cache-construct';
+import { ContainerConstruct } from './constructs/container-construct';
 
 export class PengovrAwsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const storageBucket = new s3.Bucket(this, 'StorageBucket', {
-      bucketName: 'pengovr-storage',
-      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED, // または OBJECT_WRITER
-      accessControl: s3.BucketAccessControl.PRIVATE,
-      lifecycleRules: [
-        {
-          id: 'delete-old-data', // ルール識別ID
-          enabled: true, // ルール有効化
-          expiration: cdk.Duration.days(1), // オブジェクト作成から1日後に削除
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1), // 1日経った未完了アップロードを破棄
-        },
-      ],
-      // cdk destroy 実行時に、バケット内にオブジェクトがあっても自動削除してバケットを削除する
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-      // セキュリティ設定（パブリックアクセスの完全ブロック）
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-    });
-    const s3User = new iam.User(this, 'S3AccessUser', {
-      userName: 'pengovr-s3-user',
-    });
-    storageBucket.grantReadWrite(s3User);
-    // アクセスキーを作成（アクセスキーID & シークレットキーが生成される）
-    const accessKey = new iam.AccessKey(this, 'S3UserAccessKey', {
-      user: s3User,
-    });
-    // アクセスキーID を Output に表示
+    // =============== 1. Storage レイヤー ===============
+    const storageConstruct = new StorageConstruct(this, 'Storage');
+
+    // Storage Outputs
     new cdk.CfnOutput(this, 'S3AccessKeyId', {
-      value: accessKey.accessKeyId,
+      value: storageConstruct.accessKey.accessKeyId,
       description: 'S3 Access Key ID',
     });
-    // シークレットキーを AWS Secrets Manager に安全に保管（推奨）
+
     new cdk.CfnOutput(this, 'S3SecretAccessKeySecretName', {
-      value: accessKey.secretAccessKey.unsafeUnwrap(), // ※ターミナルに出力したい場合
+      value: storageConstruct.accessKey.secretAccessKey.unsafeUnwrap(),
       description: 'S3 Secret Access Key',
     });
 
-    const vpc = new ec2.Vpc(this, 'MyVpc', {
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'), // ネットワークのCIDR範囲
-      maxAzs: 1, // 1つのアベイラビリティゾーンを使用
-      natGateways: 0, // テスト環境用：コスト節約のためNATゲートウェイを0（なし）にする
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'PublicSubnet',
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-      ],
+    // =============== 2. Network レイヤー ===============
+    const networkConstruct = new NetworkConstruct(this, 'Network', {
+      myIp: process.env.MY_IP,
     });
 
-    const securityGroup = new ec2.SecurityGroup(this, 'MyEc2SecurityGroup', {
-      vpc: vpc,
-      description: 'Security group for CDK EC2 instance',
-      allowAllOutbound: true, // アウトバウンド（送信）通信はすべて許可
+    // =============== 3. Cache レイヤー ===============
+    const cacheConstruct = new CacheConstruct(this, 'Cache', {
+      vpc: networkConstruct.vpc,
+      securityGroup: networkConstruct.securityGroup,
+      keyPair: networkConstruct.keyPair,
     });
 
-    const myIp = process.env.MY_IP;
-    if (myIp) {
-      securityGroup.addIngressRule(
-        ec2.Peer.ipv4(`${myIp}/32`),
-        ec2.Port.tcp(22),
-        'Allow SSH access from My IP',
-      );
-    }
-
-    securityGroup.addIngressRule(
-      ec2.Peer.ipv4(vpc.vpcCidrBlock),
-      ec2.Port.tcp(6379),
-      'Allow Redis/Valkey access from VPC',
-    );
-
-    const keyPair = new ec2.KeyPair(this, 'MyKeyPair', {
-      keyPairName: 'pengovr-ec2-ssh',
-      type: ec2.KeyPairType.ED25519, // または RSA
-    });
-
-    const instance = new ec2.Instance(this, 'MyEc2Instance', {
-      vpc: vpc,
-      securityGroup: securityGroup,
-      keyPair: keyPair,
-
-      // 無料枠で試せる最小クラス (t2.micro または t3.micro)
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T3,
-        ec2.InstanceSize.MICRO,
-      ),
-      // 最新の Amazon Linux 2023 AMI を自動取得
-      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
-
-      // SSHキーペア不要でWebブラウザから安全にログイン可能にする（SSM Manager）
-      ssmSessionPermissions: true,
-
-      // 配置先サブネット
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
-    });
-
-    // EC2 インスタンスの IAM ロールに CloudWatch 権限を付与
-    instance.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['cloudwatch:PutMetricData'],
-        resources: ['*'],
-      }),
-    );
-
-    instance.addUserData(
-      'dnf update -y',
-      'dnf install -y valkey cronie', // Amazon Linux 2023 推奨の Redis 互換パッケージ
-      "sed -i 's/^bind .*/bind 0.0.0.0/' /etc/valkey/valkey.conf",
-      "sed -i 's/^protected-mode yes/protected-mode no/' /etc/valkey/valkey.conf",
-      'systemctl enable valkey', // OS起動時の自動起動を有効化
-      'systemctl start valkey', // 今すぐ起動
-      `cat << 'EOF' > /usr/local/bin/send_bullmq_metrics.sh
-#!/bin/bash
-PATH=/usr/local/bin:/usr/bin:/bin:$PATH
-QUEUE_NAME="scraping-tasks"
-METRIC_NAME="WaitingJobCount"
-NAMESPACE="BullMQ/Metrics"
-REGION="us-east-1"
-
-WAITING=$(valkey-cli llen "bull:$QUEUE_NAME:wait" 2>/dev/null || echo 0)
-ACTIVE=$(valkey-cli llen "bull:$QUEUE_NAME:active" 2>/dev/null || echo 0)
-
-TOTAL_COUNT=$((WAITING + ACTIVE))
-
-aws cloudwatch put-metric-data \
-  --namespace "$NAMESPACE" \
-  --metric-data MetricName=$METRIC_NAME,Value=$TOTAL_COUNT,Unit=Count,"Dimensions=[{Name=QueueName,Value=$QUEUE_NAME}]" \
-  --region $REGION
-EOF`,
-      'chmod +x /usr/local/bin/send_bullmq_metrics.sh',
-
-      'echo "* * * * * /usr/local/bin/send_bullmq_metrics.sh" | crontab -',
-      'systemctl start crond.service',
-    );
-
-    // 出力設定：EC2のパブリックIPアドレスを表示
+    // Cache Outputs
     new cdk.CfnOutput(this, 'Ec2PublicIp', {
-      value: instance.instancePublicIp,
+      value: cacheConstruct.instance.instancePublicIp,
       description: 'Public IP address of the EC2 instance',
     });
 
-    // Dockerイメージのアセット定義（Dockerファイルがあるローカルパスを指定）
-    const workerImageAsset = new ecr_assets.DockerImageAsset(
-      this,
-      'WorkerImageAsset',
-      {
-        directory: path.join(__dirname, '../../'),
-        file: 'pengovr-aws/Dockerfile.alpine',
-      },
-    );
+    // =============== 4. Container レイヤー ===============
+    const containerConstruct = new ContainerConstruct(this, 'Container', {
+      vpc: networkConstruct.vpc,
+      taskRole: storageConstruct.taskRole,
+      redisHost: cacheConstruct.instancePrivateIp,
+      s3BucketName: storageConstruct.storageBucket.bucketName,
+      s3AccessKeyId: storageConstruct.accessKey.accessKeyId,
+      s3SecretKey: storageConstruct.accessKey.secretAccessKey.unsafeUnwrap(),
+    });
 
+    // Container Outputs
     new cdk.CfnOutput(this, 'BuiltContainerImageUri', {
-      value: workerImageAsset.imageUri,
-      description:
-        'URI of the Docker image automatically built and pushed by CDK',
+      value: 'See CloudFormation outputs for container image URI',
+      description: 'Docker image URI in ECR',
     });
-
-    // CloudWatch ロググループの定義
-    const logGroup = new logs.LogGroup(this, 'WorkerLogGroup', {
-      logGroupName: '/ecs/pengovr-worker-task',
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      retention: logs.RetentionDays.ONE_DAY,
-    });
-
-    // タスクロールと実行ロールの設定
-    const taskRole = new iam.Role(this, 'WorkerTaskRole', {
-      roleName: 'pengovr-worker-task-role',
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-    });
-    taskRole.addManagedPolicy(
-      iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
-    );
-
-    // クラスターの定義 (pengovr-cluster)
-    const cluster = new ecs.Cluster(this, 'PengovrCluster', {
-      clusterName: 'pengovr-cluster',
-      vpc,
-    });
-
-    // Fargate タスク定義 (pengovr-worker-task)
-    const taskDefinition = new ecs.FargateTaskDefinition(
-      this,
-      'WorkerTaskDef',
-      {
-        family: 'pengovr-worker-task',
-        cpu: 512, // 0.5 vCPU
-        memoryLimitMiB: 1024, // 1 GB
-        taskRole,
-        runtimePlatform: {
-          cpuArchitecture: ecs.CpuArchitecture.X86_64,
-          operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-        },
-      },
-    );
-
-    // コンテナの追加 (worker)
-    taskDefinition.addContainer('WorkerContainer', {
-      containerName: 'worker',
-      image: ecs.ContainerImage.fromDockerImageAsset(workerImageAsset),
-      essential: true,
-      logging: ecs.LogDrivers.awsLogs({
-        streamPrefix: 'ecs',
-        logGroup,
-      }),
-      // JSONで指定されていた環境変数をセット
-      environment: {
-        NODE_ENV: 'production',
-        S3_BUCKET: 'pengovr-storage',
-        REDIS_HOST: instance.instancePrivateIp,
-        QUEUE_NAME: 'scraping-tasks',
-        ENRICHMENT_QUEUE: 'enrichment-tasks',
-        S3_ACCESS_KEY: accessKey.accessKeyId,
-        S3_SECRET_KEY: accessKey.secretAccessKey.unsafeUnwrap(),
-      },
-    });
-
-    // Fargate サービス (pengovr-worker-service)
-    const fargateService = new ecs.FargateService(this, 'WorkerService', {
-      serviceName: 'pengovr-worker-service',
-      cluster,
-      taskDefinition,
-      desiredCount: 0,
-      assignPublicIp: true,
-      circuitBreaker: {
-        rollback: true, // 自動ロールバック有効化
-      },
-      minHealthyPercent: 100,
-      maxHealthyPercent: 200,
-    });
-
-    // スケーリングの対象と範囲を設定
-    const scalableTarget = fargateService.autoScaleTaskCount({
-      minCapacity: 0,
-      maxCapacity: 5,
-    });
-
-    // CloudWatch カスタムメトリクスを定義
-    const queueLengthMetric = new cloudwatch.Metric({
-      namespace: 'BullMQ/Metrics',
-      metricName: 'WaitingJobCount',
-      dimensionsMap: {
-        QueueName: 'scraping-tasks',
-      },
-      statistic: 'Average',
-      period: cdk.Duration.seconds(30),
-    });
-
-    // スケールアウト（増設）用 Step Scaling ポリシー
-    scalableTarget.scaleOnMetric('StepScaleOutPolicy', {
-      metric: queueLengthMetric,
-      scalingSteps: [
-        { upper: 0, change: 0 }, // 0件: 0台
-        { lower: 1, upper: 5, change: 1 }, // 1件: 1台
-        { lower: 5, change: 5 }, // 5件以上: 5台（最大）
-      ],
-      // ExactCapacity: scalingSteps の change の値を「全体のタスク台数」として直接適用
-      adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
-
-      // 評価期間とメトリクス集計の設定
-      evaluationPeriods: 1, // 1回の評価（1分間）で即時判定
-      metricAggregationType:
-        applicationautoscaling.MetricAggregationType.AVERAGE,
-
-      // クールダウン期間（連動して増設されすぎないよう調整）
-      cooldown: cdk.Duration.seconds(60),
-    });
-
-    // スケールイン（削減）用 Step Scaling ポリシー
-    scalableTarget.scaleOnMetric('StepScaleInPolicy', {
-      metric: queueLengthMetric,
-      scalingSteps: [
-        { upper: 0, change: 0 }, // 0件の時は 0台 に変更
-        { lower: 1, change: 0 }, // 1件以上ある時はこのポリシーでは何もしない（スケールインしない）
-      ],
-      adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
-
-      // 誤判定を防ぐため、3分連続で 0件 だった場合のみ縮小
-      evaluationPeriods: 3,
-      metricAggregationType:
-        applicationautoscaling.MetricAggregationType.AVERAGE,
-
-      // 処理中のタスクが安全に終了できるよう cooldown を長めに設定（例: 5分）
-      cooldown: cdk.Duration.seconds(300),
-    });
-
-    // Worker タスクが CloudWatch にメトリクスを送信できる権限を付与
-    taskRole.addToPrincipalPolicy(
-      new iam.PolicyStatement({
-        actions: ['cloudwatch:PutMetricData'],
-        resources: ['*'],
-      }),
-    );
   }
 }

@@ -2,12 +2,14 @@
 set -e
 
 ENV_FILE="../.env"
+LOG_FILE="./cdk.log"
 
 echo "🚀 Starting CDK deploy..."
 
-MY_IP=$(curl -s https://checkip.amazonaws.com) cdk deploy -y 2>&1 | tee cdk.log
+export MY_IP=$(curl -s https://checkip.amazonaws.com)
+cdk deploy -y 2>&1 | tee $LOG_FILE
 
-DEPLOY_OUTPUT=`cat cdk.log`
+DEPLOY_OUTPUT=`cat $LOG_FILE`
 
 # 出力から各値を抽出
 CONTAINER_IMAGE_URI=$(echo "$DEPLOY_OUTPUT" | grep "BuiltContainerImageUri" | awk -F '= ' '{print $2}' | xargs)
