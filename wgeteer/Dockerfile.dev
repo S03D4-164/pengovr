@@ -38,16 +38,16 @@ ENV LC_ALL=ja_JP.UTF-8
 RUN npm install -g pnpm@11.5.2 && npm cache clean --force
 
 # 依存関係ファイルのみ先にコピー
-COPY --chown=node:node wgeteer/package.json ./package.json
-COPY --chown=node:node wgeteer/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --chown=node:node wgeteer/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --chown=node:node wgeteer/ecosystem.config.cjs ./
-COPY --chown=node:node wgeteer/entrypoint.sh ./
-COPY --chown=node:node wgeteer/src ./src
+COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --chown=node:node pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --chown=node:node ecosystem.config.cjs ./
+COPY --chown=node:node entrypoint.sh ./
+COPY --chown=node:node src ./src
 
 # Fluxbox 設定をビルド時に配置
 RUN mkdir -p /home/node/.fluxbox && chown node:node /home/node/.fluxbox
-COPY --chown=node:node wgeteer/fluxbox_init /home/node/.fluxbox/init
+COPY --chown=node:node fluxbox_init /home/node/.fluxbox/init
 
 # 最終的な権限調整とログディレクトリ作成（特定のターゲットのみ実施）
 RUN mkdir -p ./logs && \

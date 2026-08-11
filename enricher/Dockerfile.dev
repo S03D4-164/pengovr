@@ -15,12 +15,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN npm install -g pnpm@11.5.2
 
 # 1. 依存関係ファイルのみ先にコピー（レイヤーキャッシュ活用）
-COPY --chown=node:node enricher/package.json ./
-COPY --chown=node:node enricher/pnpm-lock.yaml ./
-COPY --chown=node:node enricher/pnpm-workspace.yaml ./
-COPY --chown=node:node enricher/scripts/ ./scripts/
-COPY --chown=node:node enricher/ecosystem.config.cjs ./
-COPY --chown=node:node enricher/src/ ./src
+COPY --chown=node:node package.json ./
+COPY --chown=node:node pnpm-lock.yaml ./
+COPY --chown=node:node pnpm-workspace.yaml ./
+COPY --chown=node:node scripts/ ./scripts/
+COPY --chown=node:node ecosystem.config.cjs ./
+COPY --chown=node:node src/ ./src
 
 USER node
 

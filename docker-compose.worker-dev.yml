@@ -20,8 +20,8 @@ services:
 
   wgeteer-dev:
     build:
-      context: .
-      dockerfile: wgeteer/Dockerfile.dev
+      context: wgeteer
+      dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
       cache_from:
@@ -58,17 +58,12 @@ services:
         max-file: '10'
     restart: unless-stopped
     network_mode: host
-    #networks:
-    #  - app-network
-    #depends_on:
-    #- redis
-    #- seaweedfs
 
   # Enrichment Worker Service
   enricher-dev:
     build:
-      context: .
-      dockerfile: enricher/Dockerfile.dev
+      context: enricher
+      dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
       cache_from:
@@ -85,7 +80,6 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
       - ENRICHMENT_QUEUE=enrichment-tasks
-      # load from .env
       - VTKEY=${VTKEY}
       - GSBKEY=${GSBKEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -94,22 +88,13 @@ services:
     init: true
     volumes:
       - ./enricher/src:/app/enricher/src
-      - ./enricher/scripts:/app/enricher/scripts
-      - ./enricher/ecosystem.config.cjs:/app/enricher/ecosystem.config.cjs
-      - ./enricher/package.json:/app/enricher/package.json
-      - ./enricher/pnpm-lock.yaml:/app/enricher/pnpm-lock.yaml
-      - ./enricher/entrypoint.sh:/app/enricher/entrypoint.sh
+      - /app/node_modules
       - ./enricher/logs:/app/enricher/logs:Z
     working_dir: /app/enricher
-    command: /bin/bash /app/enricher/entrypoint.sh
+    #command: /bin/bash /app/enricher/entrypoint.sh
     mem_limit: 2g
     restart: unless-stopped
     network_mode: host
-    #networks:
-    #  - app-network
-    #depends_on:
-    #- redis
-    #- seaweedfs
 
   gosb:
     build: 'gosb'

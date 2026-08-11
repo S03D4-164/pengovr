@@ -8,13 +8,13 @@ WORKDIR $APP_HOME
 
 RUN npm install -g pnpm@11.5.2
 
-COPY wgeteer/package.json wgeteer/pnpm-lock.yaml wgeteer/pnpm-workspace.yaml wgeteer/tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --store-dir=/root/.local/share/pnpm/store
 
 # ソースコードをコピーして JavaScript にコンパイル
-COPY wgeteer/src ./src
+COPY src ./src
 
 RUN pnpm build 
 
@@ -50,7 +50,7 @@ RUN apk update && apk add --no-cache \
     && chown node:node $APP_HOME
 
 # 本番用の必要最低限のライブラリだけをインストール (--prod)
-COPY --chown=node:node wgeteer/package.json wgeteer/pnpm-lock.yaml wgeteer/pnpm-workspace.yaml ./
+COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN npm install -g pnpm@11.5.2
 
@@ -63,7 +63,7 @@ COPY --chown=node:node --from=builder /app/worker/dist ./dist
 
 # Fluxbox 設定などをコピー
 RUN mkdir -p /home/node/.fluxbox
-COPY --chown=node:node wgeteer/fluxbox_init /home/node/.fluxbox/init
+COPY --chown=node:node fluxbox_init /home/node/.fluxbox/init
 
 USER node
 
