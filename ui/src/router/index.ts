@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Tasks from '../views/Tasks.vue';
-import TaskDetail from '../views/TaskDetail.vue';
 import Websites from '../views/Websites.vue';
 import WebsiteDetail from '../views/WebsiteDetail.vue';
 import Webpages from '../views/Webpages.vue';
@@ -41,7 +40,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {

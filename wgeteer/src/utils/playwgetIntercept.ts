@@ -27,7 +27,10 @@ async function saveResponse(
       }
     }
 
-    if (!responseBuffer && responseStatus >= 200) {
+    if (
+      (!responseBuffer || responseBuffer.length === 0) &&
+      responseStatus >= 200
+    ) {
       responseBuffer = await interceptedResponse.body();
     }
   } catch (err: any) {

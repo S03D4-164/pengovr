@@ -391,6 +391,7 @@ export default {
 pre {
   white-space: pre-wrap;
   word-break: break-all;
+  width: 100%;
 }
 :deep(pre[class*='language-']),
 :deep(code[class*='language-']) {

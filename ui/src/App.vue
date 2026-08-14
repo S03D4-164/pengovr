@@ -1,10 +1,10 @@
 <template>
   <div class="flex flex-col min-h-screen bg-base-100">
     <header
-      class="flex justify-center items-center py-4 px-6 bg-base-100 border-b border-base-200 shadow-sm sticky top-0 z-40"
+      class="flex justify-center items-center p-2 bg-base-100 border-b border-base-200 shadow-sm sticky top-0 z-40"
     >
       <nav class="flex items-center gap-4 flex-wrap justify-center">
-        <ul class="menu menu-horizontal bg-base-200 rounded-box p-1 gap-1">
+        <ul class="menu menu-horizontal p-1 gap-1 text-lg">
           <li>
             <RouterLink to="/websites" active-class="active"
               >Websites</RouterLink
@@ -86,9 +86,7 @@
       </nav>
     </header>
 
-    <main
-      class="flex-1 w-full max-w-[1280px] mx-auto p-4 sm:p-6 lg:p-8 layout-container"
-    >
+    <main class="flex-1 w-full max-w-[1280px] mx-auto p-2 layout-container">
       <RouterView />
     </main>
 

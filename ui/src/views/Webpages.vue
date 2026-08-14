@@ -1,7 +1,5 @@
 <template>
-  <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Webpages</h1>
-
+  <div class="container mx-auto max-w-[1280px] p-2">
     <!-- Filter Message -->
     <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
       {{ filterMessage }}
@@ -10,9 +8,11 @@
     <!-- Fixed Navigation -->
     <FixedNav />
 
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card bg-base-100 card-bordered">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
+          <h1 class="text-3xl font-bold">Webpages</h1>
+
           <input
             v-model="searchQuery"
             @keyup.enter="handleSearch"
@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+    <div class="overflow-x-auto bg-base-100 rounded-box">
       <div
         class="flex items-center justify-between p-2 mb-2 gap-2"
         v-if="data.docs.length > 0"
@@ -80,7 +80,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-          <label>Per page:</label>
+          <label class="w-30">Per page:</label>
           <select
             v-model="limit"
             @change="changeLimit(limit)"

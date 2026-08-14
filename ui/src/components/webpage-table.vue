@@ -1,6 +1,6 @@
 <template>
   <div class="overflow-x-auto">
-    <table class="table table-zebra w-full min-w-[900px]">
+    <table class="table w-full min-w-[900px]">
       <thead>
         <tr>
           <th class="w-2/5">Webpage</th>
@@ -20,14 +20,21 @@
                 >
                 <div class="text-sm opacity-60">
                   {{ getRelativeTime(webpage.createdAt) }}
-                  <span class="opacity-50 ml-1">({{ formatDate(webpage.createdAt) }})</span>
+                  <span class="opacity-50 ml-1"
+                    >({{ formatDate(webpage.createdAt) }})</span
+                  >
                   <span v-if="webpage.relatedDate" class="opacity-70 ml-1">
                     / Rel: {{ getRelativeTime(webpage.relatedDate) }}
-                    <span class="opacity-50 ml-1">({{ formatDate(webpage.relatedDate) }})</span>
+                    <span class="opacity-50 ml-1"
+                      >({{ formatDate(webpage.relatedDate) }})</span
+                    >
                   </span>
                 </div>
               </div>
-              <div class="text-sm break-all opacity-80 mt-1" :title="webpage.input">
+              <div
+                class="text-sm break-all opacity-80 mt-1"
+                :title="webpage.input"
+              >
                 {{ displayUrl(webpage.input) }}
               </div>
               <div
@@ -62,7 +69,9 @@
             >
               {{ webpage.error }}
             </div>
-            <div class="text-base font-bold truncate max-w-md">{{ webpage.title || 'N/A' }}</div>
+            <div class="text-base font-bold truncate max-w-md">
+              {{ webpage.title || 'N/A' }}
+            </div>
             <div class="flex flex-col gap-0.5 mb-2 mt-1">
               <div
                 class="text-sm break-all"
@@ -77,18 +86,32 @@
               </div>
             </div>
             <div class="flex items-center gap-2 mt-1">
-              <span :class="getStatusClass(webpage.status)">{{ webpage.status || '???' }}</span>
+              <span :class="getStatusClass(webpage.status)">{{
+                webpage.status || '???'
+              }}</span>
               <span class="text-sm opacity-50">|</span>
               <span class="text-sm text-primary font-medium"
-                >Req: {{ webpage.requestCount || webpage.requests?.length || 0 }}</span
+                >Req:
+                {{
+                  webpage.requestCount || webpage.requests?.length || 0
+                }}</span
               >
               <span class="text-sm text-success font-medium"
-                >Res: {{ webpage.responseCount || webpage.responses?.length || 0 }}</span
+                >Res:
+                {{
+                  webpage.responseCount || webpage.responses?.length || 0
+                }}</span
               >
             </div>
-            <div v-if="webpage.remoteAddress?.ip" class="text-sm opacity-70 font-mono mt-1">
+            <div
+              v-if="webpage.remoteAddress?.ip"
+              class="text-sm opacity-70 font-mono mt-1"
+            >
               IP: {{ webpage.remoteAddress.ip }}
-              <span v-if="webpage.remoteAddress.geoip?.[0]?.country" class="opacity-60">
+              <span
+                v-if="webpage.remoteAddress.geoip?.[0]?.country"
+                class="opacity-60"
+              >
                 ({{ webpage.remoteAddress.geoip[0].country }})
               </span>
             </div>

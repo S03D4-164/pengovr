@@ -21,7 +21,7 @@
               v-model="urlRegex"
               @keyup.enter="handleSearch"
               placeholder="Filter URL..."
-              class="input input-bordered input-sm w-40"
+              class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
@@ -32,7 +32,7 @@
               v-model="textRegex"
               @keyup.enter="handleSearch"
               placeholder="Filter content..."
-              class="input input-bordered input-sm w-40"
+              class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
@@ -43,7 +43,7 @@
               v-model="ipRegex"
               @keyup.enter="handleSearch"
               placeholder="Filter IP..."
-              class="input input-bordered input-sm w-32"
+              class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
@@ -54,7 +54,7 @@
               v-model="yaraRegex"
               @keyup.enter="handleSearch"
               placeholder="Filter YARA..."
-              class="input input-bordered input-sm w-40"
+              class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">

@@ -9,6 +9,7 @@ export default defineConfig({
     global: 'window',
     Buffer: 'Uint8Array',
   },
+  base: '/pengovr/',
   server: {
     port: 3001,
     host: '0.0.0.0',
