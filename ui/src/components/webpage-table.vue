@@ -15,7 +15,7 @@
               <div class="flex items-baseline gap-2 flex-wrap">
                 <router-link
                   :to="`/webpages/${webpage._id}`"
-                  class="link link-primary text-sm font-mono"
+                  class="link link-primary text-sm"
                   >ID: {{ webpage._id }}</router-link
                 >
                 <div class="text-sm opacity-60">
@@ -31,10 +31,7 @@
                   </span>
                 </div>
               </div>
-              <div
-                class="text-sm break-all opacity-80 mt-1"
-                :title="webpage.input"
-              >
+              <div class="text-sm break-all mt-1" :title="webpage.input">
                 {{ displayUrl(webpage.input) }}
               </div>
               <div
@@ -46,7 +43,7 @@
                     <template v-for="(value, key) in webpage.option" :key="key">
                       <tr v-if="value" class="border-none">
                         <td
-                          class="py-0.5 px-2 font-bold opacity-50 text-sm w-32 align-top uppercase border-none"
+                          class="py-0.5 px-2 opacity-50 text-sm w-32 align-top uppercase border-none"
                         >
                           {{ key }}:
                         </td>
@@ -69,7 +66,7 @@
             >
               {{ webpage.error }}
             </div>
-            <div class="text-base font-bold truncate max-w-md">
+            <div class="text-base truncate max-w-md">
               {{ webpage.title || 'N/A' }}
             </div>
             <div class="flex flex-col gap-0.5 mb-2 mt-1">
@@ -77,8 +74,8 @@
                 class="text-sm break-all"
                 :class="
                   webpage.url && webpage.url !== webpage.input
-                    ? 'text-warning font-semibold opacity-100'
-                    : 'opacity-70'
+                    ? 'text-warning opacity-100'
+                    : 'opacity-100'
                 "
                 :title="webpage.url"
               >
@@ -87,7 +84,7 @@
             </div>
             <div class="flex items-center gap-2 mt-1">
               <span :class="getStatusClass(webpage.status)">{{
-                webpage.status || '???'
+                webpage.status || 'N/A'
               }}</span>
               <span class="text-sm opacity-50">|</span>
               <span class="text-sm text-primary font-medium"
@@ -103,10 +100,7 @@
                 }}</span
               >
             </div>
-            <div
-              v-if="webpage.remoteAddress?.ip"
-              class="text-sm opacity-70 font-mono mt-1"
-            >
+            <div v-if="webpage.remoteAddress?.ip" class="text-sm mt-1">
               IP: {{ webpage.remoteAddress.ip }}
               <span
                 v-if="webpage.remoteAddress.geoip?.[0]?.country"

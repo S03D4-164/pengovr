@@ -4,7 +4,7 @@
     <FixedNav />
 
     <!-- Filter Message -->
-    <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
+    <div v-if="filterMessage" class="alert alert-info text-sm">
       {{ filterMessage }}
     </div>
 

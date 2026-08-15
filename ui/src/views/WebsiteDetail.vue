@@ -12,9 +12,7 @@
           <tr>
             <th class="w-1/3 opacity-60">ID</th>
             <td>
-              <span class="font-mono text-base opacity-70">{{
-                website._id
-              }}</span>
+              <span class="text-base">{{ website._id }}</span>
             </td>
           </tr>
           <tr>
@@ -31,7 +29,7 @@
               <a
                 :href="`/api/websites/${website._id}`"
                 target="_blank"
-                class="link link-primary text-sm font-mono"
+                class="link link-primary text-base"
                 >/api/websites/{{ website._id }}</a
               >
             </td>

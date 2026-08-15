@@ -1,14 +1,13 @@
 <template>
-  <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Payloads</h1>
-
+  <div class="container mx-auto max-w-[1280px] p-2">
     <!-- Fixed Navigation -->
     <FixedNav />
 
     <!-- Search Filter -->
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
+          <h1 class="text-3xl font-bold">Payloads</h1>
           <input
             v-model="searchQuery"
             @keyup.enter="handleSearch"
@@ -29,7 +28,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+    <div class="overflow-x-auto">
       <div
         class="flex items-center justify-between p-2 mb-2 gap-2"
         v-if="data.docs.length > 0"
@@ -90,7 +89,7 @@
         </thead>
         <tbody>
           <tr v-for="payload in data.docs" :key="payload._id" class="hover">
-            <td class="text-base-content/70">
+            <td>
               {{ formatDate(payload.createdAt) }}
             </td>
             <td>

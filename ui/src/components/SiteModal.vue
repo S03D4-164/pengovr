@@ -3,7 +3,9 @@
     <div class="modal-box max-w-4xl">
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg font-bold">Track Configuration</h3>
-        <button @click="close" class="btn btn-sm btn-circle btn-ghost">✕</button>
+        <button @click="close" class="btn btn-sm btn-circle btn-ghost">
+          ✕
+        </button>
       </div>
 
       <form @submit.prevent="saveSettings" class="space-y-4">
@@ -11,7 +13,7 @@
           <label class="label p-1">
             <span class="label-text font-bold">URL</span>
           </label>
-          <div class="bg-base-200 p-2 rounded text-xs break-all opacity-70">
+          <div class="bg-base-200 p-2 rounded text-base break-all">
             {{ websiteUrl }}
           </div>
         </div>
@@ -20,7 +22,9 @@
           <div class="form-control w-full">
             <label class="label p-1">
               <span class="label-text font-bold">Counter</span>
-              <span class="label-text-alt opacity-60">0-72 tasks (0 = disabled)</span>
+              <span class="label-text-alt opacity-60"
+                >0-72 tasks (0 = disabled)</span
+              >
             </label>
             <div class="join w-full">
               <button
@@ -78,17 +82,28 @@
           </div>
         </div>
 
-        <div class="divider opacity-50 uppercase text-xs font-bold">Scraping Options</div>
+        <div class="divider opacity-50 uppercase text-xs font-bold">
+          Scraping Options
+        </div>
 
         <ScrapingOptionsForm v-model="scrapingOptions" />
 
         <div class="modal-action">
           <div class="flex gap-2 w-full">
-            <button type="submit" class="btn btn-primary btn-sm flex-1" :disabled="saving">
-              <span v-if="saving" class="loading loading-spinner loading-xs"></span>
+            <button
+              type="submit"
+              class="btn btn-primary btn-sm flex-1"
+              :disabled="saving"
+            >
+              <span
+                v-if="saving"
+                class="loading loading-spinner loading-xs"
+              ></span>
               Save Settings
             </button>
-            <button type="button" @click="close" class="btn btn-ghost btn-sm">Cancel</button>
+            <button type="button" @click="close" class="btn btn-ghost btn-sm">
+              Cancel
+            </button>
           </div>
         </div>
       </form>

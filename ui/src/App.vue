@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col min-h-screen bg-base-100">
     <header
-      class="flex justify-center items-center p-2 sticky top-0 z-40 bg-base-300"
+      class="flex justify-center items-center sticky top-0 z-40 bg-base-300"
     >
       <nav class="flex items-center gap-4 flex-wrap justify-center">
         <ul class="menu menu-horizontal p-1 gap-1 text-lg">

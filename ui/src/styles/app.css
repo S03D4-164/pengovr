@@ -1,6 +1,16 @@
 @import 'tailwindcss';
 @plugin "daisyui";
 
+/* labelのデフォルトスタイル */
+label {
+  @apply whitespace-nowrap;
+}
+
+/* theadのデフォルトスタイル */
+thead {
+  @apply bg-base-300;
+}
+
 /* テーブル、カード、入力フォームの共通ボーダースタイル */
 .table th,
 .table td,
@@ -20,4 +30,9 @@
 [data-theme='dark'] .textarea,
 [data-theme='dark'] .input {
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ナビゲーションリンクのアクティブ状態の強調表示 */
+.menu li a.active {
+  @apply bg-primary text-primary-content;
 }
