@@ -346,22 +346,6 @@ export default {
   min-height: 100vh;
 }
 
-.table th,
-.table td,
-.card-bordered,
-.mockup-code {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .card-bordered,
-[data-theme='dark'] .mockup-code {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 pre {
   white-space: pre-wrap;
   word-break: break-all;

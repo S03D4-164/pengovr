@@ -422,19 +422,6 @@ export default {
   min-height: 100vh;
 }
 
-/* 入力エリア、結果エリア、テーブル等の境界線スタイルを統一 */
-.input-textarea,
-.result-display,
-.result-placeholder {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .input-textarea,
-[data-theme='dark'] .result-display,
-[data-theme='dark'] .result-placeholder {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 pre {
   white-space: pre-wrap;
   word-break: break-all;

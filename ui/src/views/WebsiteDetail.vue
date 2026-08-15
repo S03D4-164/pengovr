@@ -528,17 +528,4 @@ export default {
   overflow-y: auto;
   min-height: 100vh;
 }
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
-}
 </style>

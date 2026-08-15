@@ -554,21 +554,6 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td,
-.textarea,
-.input {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .textarea,
-[data-theme='dark'] .input {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 .col-date {
   width: 20%;
 }

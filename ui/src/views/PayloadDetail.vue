@@ -496,17 +496,4 @@ export default {
 }
 
 /* テーブル、カード、コードブロックの枠線カスタマイズ */
-.table th,
-.table td,
-.card-bordered,
-.mockup-code {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .card-bordered,
-[data-theme='dark'] .mockup-code {
-  border-color: rgba(255, 255, 255, 0.5);
-}
 </style>

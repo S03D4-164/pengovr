@@ -177,16 +177,3 @@ const getStatusClass = (status: number) => {
 
 const getThumbnailUrl = (thumbnail: string) => formatImageUrl(thumbnail);
 </script>
-
-<style scoped>
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-</style>

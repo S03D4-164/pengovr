@@ -1,16 +1,16 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Responses</h1>
+    <!-- Fixed Navigation -->
+    <FixedNav />
+
+    <h1 class="text-3xl font-bold">Responses</h1>
 
     <!-- Filter Message -->
     <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
       {{ filterMessage }}
     </div>
 
-    <!-- Fixed Navigation -->
-    <FixedNav />
-
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
           <div class="form-control">
@@ -105,7 +105,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+    <div class="overflow-x-auto">
       <div
         class="flex items-center justify-between p-2 mb-2 gap-2"
         v-if="data.docs.length > 0"
@@ -142,7 +142,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-          <label>Per page:</label>
+          <label class="whitespace-nowrap">Per page:</label>
           <select
             v-model="limit"
             @change="changeLimit(limit)"
@@ -154,7 +154,7 @@
           </select>
         </div>
       </div>
-      <table class="table table-zebra w-full">
+      <table class="table w-full">
         <thead>
           <tr>
             <th class="w-1/5">Created</th>
@@ -452,18 +452,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

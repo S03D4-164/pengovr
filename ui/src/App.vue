@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col min-h-screen bg-base-100">
     <header
-      class="flex justify-center items-center p-2 bg-base-100 border-b border-base-200 shadow-sm sticky top-0 z-40"
+      class="flex justify-center items-center p-2 sticky top-0 z-40 bg-base-300"
     >
       <nav class="flex items-center gap-4 flex-wrap justify-center">
         <ul class="menu menu-horizontal p-1 gap-1 text-lg">
@@ -47,10 +47,7 @@
             >
           </li>
         </ul>
-        <button
-          class="btn btn-outline btn-success btn-sm"
-          @click.prevent="openUrlModal"
-        >
+        <button class="btn btn-success btn-sm" @click.prevent="openUrlModal">
           Add URLs
         </button>
         <label class="swap swap-rotate btn btn-sm btn-ghost btn-circle">
@@ -93,9 +90,7 @@
     <footer
       class="footer footer-center p-4 bg-base-200 text-base-content/70 border-t border-base-300 mt-auto"
     >
-      <aside>
-        <p>Backend API: /api</p>
-      </aside>
+      <aside></aside>
     </footer>
 
     <!-- URL Modal -->
