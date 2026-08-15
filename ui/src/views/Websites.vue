@@ -1,30 +1,58 @@
 <template>
-  <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Websites</h1>
-
+  <div class="container mx-auto max-w-[1280px] p-2">
     <!-- Fixed Navigation -->
     <FixedNav />
 
     <!-- Error Alert -->
-    <div v-if="errorMessage" class="alert alert-error shadow-sm mb-6 flex justify-between items-center">
+    <div
+      v-if="errorMessage"
+      class="alert alert-error shadow-sm mb-6 flex justify-between items-center"
+    >
       <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
         <span class="font-bold">{{ errorMessage }}</span>
       </div>
-      <button @click="fetchWebsites" class="btn btn-sm btn-outline text-white border-white hover:bg-white hover:text-error">Retry</button>
+      <button
+        @click="fetchWebsites"
+        class="btn btn-sm btn-outline text-white border-white hover:bg-white hover:text-error"
+      >
+        Retry
+      </button>
     </div>
 
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
+          <h1 class="text-3xl font-bold">Websites</h1>
+
           <input
             v-model="searchQuery"
             @keyup.enter="handleSearch"
             placeholder="Search by URL..."
             class="input input-bordered input-sm flex-1"
           />
-          <input v-model="startDate" type="date" class="input input-bordered input-sm w-36" />
-          <input v-model="endDate" type="date" class="input input-bordered input-sm w-36" />
+          <input
+            v-model="startDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
+          <input
+            v-model="endDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
           <label class="flex items-center gap-2 cursor-pointer mb-1">
             <input
               type="checkbox"
@@ -32,9 +60,13 @@
               @change="handleSearch"
               class="checkbox checkbox-primary checkbox-sm"
             />
-            <span class="label-text text-sm font-bold whitespace-nowrap">Tracking Only</span>
+            <span class="label-text text-sm font-bold whitespace-nowrap"
+              >Tracking Only</span
+            >
           </label>
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
           <button
             @click="clearSearch"
             v-if="searchQuery || startDate || endDate || onlyTracking"
@@ -46,10 +78,14 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="data.docs.length > 0">
+    <div class="overflow-x-auto bg-base-100 rounded-box">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="data.docs.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ data.totalDocs }} websites | Page {{ data.page }} of {{ data.totalPages }}
+          Total: {{ data.totalDocs }} websites | Page {{ data.page }} of
+          {{ data.totalPages }}
         </div>
         <div class="join">
           <button
@@ -63,7 +99,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -76,7 +115,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-          <label>Per page:</label>
+          <label class="whitespace-nowrap">Per page:</label>
           <select
             v-model="limit"
             @change="changeLimit(limit)"
@@ -88,7 +127,7 @@
           </select>
         </div>
       </div>
-      <table class="table table-zebra w-full">
+      <table class="table w-full">
         <thead>
           <tr>
             <th class="w-1/4">Website</th>
@@ -103,18 +142,23 @@
                 <div class="flex items-baseline gap-2 flex-wrap">
                   <router-link
                     :to="'/websites/' + website._id"
-                    class="link link-primary text-sm font-mono"
+                    class="link link-primary text-sm"
                     >{{ website._id }}</router-link
                   >
                   <div class="text-sm opacity-60">
                     {{ getRelativeTime(website.createdAt) }}
-                    <span class="opacity-50 ml-1">({{ formatDate(website.createdAt) }})</span>
+                    <span class="opacity-50 ml-1"
+                      >({{ formatDate(website.createdAt) }})</span
+                    >
                   </div>
                 </div>
-                <div class="text-sm break-all opacity-80" :title="website.url">
+                <div class="text-base break-all" :title="website.url">
                   {{ displayUrl(website.url) }}
                 </div>
-                <div v-if="website.gsb?.lookup?.matches?.length > 0" class="flex flex-wrap gap-1">
+                <div
+                  v-if="website.gsb?.lookup?.matches?.length > 0"
+                  class="flex flex-wrap gap-1"
+                >
                   <span
                     v-for="(warning, idx) in website.gsb.lookup.matches"
                     :key="idx"
@@ -124,7 +168,9 @@
                   </span>
                 </div>
                 <div v-else-if="website.gsb?.lookup?.matches">
-                  <span class="badge badge-success badge-md text-white">GSB Safe</span>
+                  <span class="badge badge-success badge-md text-white"
+                    >GSB Safe</span
+                  >
                 </div>
                 <div v-else-if="website.gsb?.lookup?.error">
                   <span class="badge badge-error badge-md text-white">{{
@@ -132,8 +178,11 @@
                   }}</span>
                 </div>
                 <div v-if="website.track?.counter > 0" class="mt-1">
-                  <span class="badge badge-info badge-outline badge-md font-semibold">
-                    Track: {{ website.track.counter }} tasks / {{ website.track.period || 1 }}h
+                  <span
+                    class="badge badge-info badge-outline badge-md font-semibold"
+                  >
+                    Track: {{ website.track.counter }} tasks /
+                    {{ website.track.period || 1 }}h
                   </span>
                 </div>
               </div>
@@ -145,7 +194,7 @@
                   <div class="flex items-baseline gap-2 flex-wrap">
                     <router-link
                       :to="'/webpages/' + website.last._id"
-                      class="link link-secondary text-sm font-mono"
+                      class="link link-secondary text-sm"
                       >{{ website.last._id }}</router-link
                     >
                     <div class="text-sm opacity-60">
@@ -153,7 +202,10 @@
                       <span class="opacity-50 ml-1"
                         >({{ formatDate(website.last.createdAt) }})</span
                       >
-                      <span v-if="website.last.relatedDate" class="opacity-70 ml-1">
+                      <span
+                        v-if="website.last.relatedDate"
+                        class="opacity-70 ml-1"
+                      >
                         / Rel: {{ getRelativeTime(website.last.relatedDate) }}
                         <span class="opacity-50 ml-1"
                           >({{ formatDate(website.last.relatedDate) }})</span
@@ -161,15 +213,16 @@
                       </span>
                     </div>
                   </div>
-                  <div class="text-base font-bold truncate max-w-md">
+                  <div class="text-base truncate max-w-md">
                     {{ website.last.title || 'N/A' }}
                   </div>
+
                   <div
-                    class="text-sm break-all"
+                    class="text-base break-all"
                     :class="
                       website.last.url && website.last.url !== website.url
-                        ? 'text-warning font-semibold opacity-100'
-                        : 'opacity-70'
+                        ? 'text-warning opacity-100'
+                        : 'opacity-100'
                     "
                     :title="website.last.url || website.last.input"
                   >
@@ -179,7 +232,7 @@
 
                 <div class="flex items-center gap-2 mt-1 flex-wrap">
                   <span :class="getStatusClass(website.last.status)">{{
-                    website.last.status || '???'
+                    website.last.status || 'N/A'
                   }}</span>
                   <span class="text-sm opacity-50">|</span>
                   <span class="text-sm text-primary font-medium"
@@ -190,7 +243,7 @@
                   >
                   <template v-if="website.last.remoteAddress?.ip">
                     <span class="text-sm opacity-50">|</span>
-                    <div class="text-sm opacity-70 font-mono">
+                    <div class="text-sm">
                       IP: {{ website.last.remoteAddress.ip }}
                       <span
                         v-if="website.last.remoteAddress.geoip?.[0]?.country"
@@ -219,7 +272,12 @@
                   </span>
                 </div>
               </div>
-              <div v-else class="text-base-content/30 italic text-sm text-center">No history</div>
+              <div
+                v-else
+                class="text-base-content/30 italic text-sm text-center"
+              >
+                No history
+              </div>
             </td>
 
             <td class="text-center">
@@ -241,7 +299,11 @@
       </table>
     </div>
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="modalScreenshotId" @close="closeModal" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="modalScreenshotId"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -253,7 +315,11 @@ import { scrollToSection } from '../utils/scroll-utils';
 import { formatDate, getRelativeTime } from '../utils/date-utils';
 import { displayUrl } from '../utils/url-utils';
 import { formatImageUrl } from '../utils/format-utils';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 export default {
   name: 'Websites',
@@ -320,7 +386,11 @@ export default {
         this.data = response;
       } catch (error) {
         console.error('Error fetching websites:', error);
-        const details = error.response?.data?.details || error.response?.data?.error || error.message || 'Unknown error';
+        const details =
+          error.response?.data?.details ||
+          error.response?.data?.error ||
+          error.message ||
+          'Unknown error';
         this.errorMessage = `Failed to load websites: ${details}`;
       } finally {
         this.loading = false;
@@ -353,7 +423,8 @@ export default {
     },
     getStatusClass(status) {
       const base = 'badge badge-sm font-bold ';
-      if (status >= 200 && status < 300) return base + 'badge-success text-white';
+      if (status >= 200 && status < 300)
+        return base + 'badge-success text-white';
       if (status >= 300 && status < 400) return base + 'badge-warning';
       if (status >= 400 && status < 500) return base + 'badge-error text-white';
       if (status >= 500) return base + 'badge-error text-white';
@@ -368,7 +439,10 @@ export default {
       this.modalWebpage = null;
     },
     openScreenshotsModal(webpage) {
-      console.log('[Websites] Clicked thumbnail. Full webpage object:', webpage);
+      console.log(
+        '[Websites] Clicked thumbnail. Full webpage object:',
+        webpage,
+      );
       // メインのスクリーンショットを優先し、なければギャラリーの最初の1枚をフォールバックとして使用
       const screenshotId =
         webpage?.screenshot ||
@@ -389,18 +463,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

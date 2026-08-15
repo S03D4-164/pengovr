@@ -3,10 +3,10 @@
     <!-- Fixed Navigation -->
     <FixedNav />
 
-    <h1 class="text-3xl font-bold">Responses</h1>
+    <h1 class="text-3xl font-bold mb-2">Responses</h1>
 
     <!-- Filter Message -->
-    <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
+    <div v-if="filterMessage" class="alert alert-info mb-2 text-sm">
       {{ filterMessage }}
     </div>
 
@@ -15,45 +15,45 @@
         <div class="flex flex-wrap gap-4 items-end">
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">URL Regex</span></label
+              ><span class="label-text text-sm">URL</span></label
             >
             <input
               v-model="urlRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter URL..."
+              placeholder="Filter URL regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">Text Regex</span></label
+              ><span class="label-text text-sm">Text</span></label
             >
             <input
               v-model="textRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter content..."
+              placeholder="Filter content regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">IP Regex</span></label
+              ><span class="label-text text-sm">IP</span></label
             >
             <input
               v-model="ipRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter IP..."
+              placeholder="Filter IP regex  ..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">YARA Regex</span></label
+              ><span class="label-text text-sm">YARA</span></label
             >
             <input
               v-model="yaraRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter YARA..."
+              placeholder="Filter YARA regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
@@ -155,39 +155,39 @@
         </div>
       </div>
       <table class="table w-full">
-        <thead>
+        <thead class="bg-base-300">
           <tr>
-            <th class="w-1/5">Created</th>
-            <th class="w-2/5">Response</th>
-            <th class="w-2/5">Related</th>
+            <th class="w-2/7">Created</th>
+            <th class="w-3/7">Response</th>
+            <th class="w-2/7">Related</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="response in data.docs" :key="response._id" class="hover">
-            <td class="text-sm text-base-content/60">
+            <td class="text-base">
               {{ formatDate(response.createdAt) }}
             </td>
             <td>
               <div class="flex flex-col gap-1">
                 <router-link
                   :to="`/responses/${response._id}`"
-                  class="link link-primary text-sm font-mono"
+                  class="link link-primary text-base"
                   >{{ response._id }}</router-link
                 >
                 <div
-                  class="text-sm font-medium break-all"
+                  class="text-base font-medium break-all"
                   :title="response.url"
                 >
                   {{ displayUrl(response.url) }}
                 </div>
-                <div class="flex items-center gap-2 text-sm">
+                <div class="flex items-center gap-2 text-base">
                   <span :class="getStatusClass(response.status)">
                     {{ response.status }} {{ response.statusText }}
                   </span>
                   <span class="opacity-50">|</span>
                   <span>{{ response.text?.length || 0 }} bytes</span>
                   <span class="opacity-50">|</span>
-                  <span class="opacity-70 font-mono">
+                  <span>
                     {{ response.remoteAddress?.ip || '-' }}
                     <span v-if="response.remoteAddress?.geoip?.length">
                       ({{ response.remoteAddress.geoip[0]?.country || '' }})
@@ -212,13 +212,10 @@
               <div class="flex flex-col gap-1" v-if="response.webpage">
                 <router-link
                   :to="`/webpages/${response.webpage._id}`"
-                  class="link link-secondary text-sm font-mono"
+                  class="link link-secondary text-base"
                   >{{ response.webpage._id }}</router-link
                 >
-                <div
-                  class="text-sm opacity-70 break-all"
-                  :title="response.webpage.url"
-                >
+                <div class="break-all text-base" :title="response.webpage.url">
                   {{ displayUrl(response.webpage.url) }}
                 </div>
                 <router-link

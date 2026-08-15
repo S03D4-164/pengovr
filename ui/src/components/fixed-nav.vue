@@ -5,7 +5,7 @@
       :key="target.id"
       href="#"
       @click.prevent="scrollTo(target.id)"
-      class="btn btn-circle btn-sm shadow-lg"
+      class="btn btn-sm shadow-lg"
       :class="target.btnClass"
     >
       {{ target.label }}
@@ -29,7 +29,7 @@ export default {
       if (this.targets) return this.targets;
       return [
         { id: 'top', label: '↑', btnClass: 'btn-primary' },
-        { id: 'bottom', label: '↓', btnClass: 'btn-ghost' },
+        { id: 'bottom', label: '↓', btnClass: 'btn-secondary' },
       ];
     },
   },

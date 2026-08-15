@@ -1,23 +1,33 @@
 <template>
-  <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Screenshots</h1>
-
+  <div class="container mx-auto max-w-[1280px] p-2">
     <!-- Fixed Navigation -->
     <FixedNav />
 
     <!-- Search Filter -->
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card bg-base-100">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
+          <h1 class="text-3xl font-bold">Screenshots</h1>
+
           <input
             v-model="searchQuery"
             @keyup.enter="handleSearch"
             placeholder="Search by tag..."
             class="input input-bordered input-sm flex-1"
           />
-          <input v-model="startDate" type="date" class="input input-bordered input-sm w-36" />
-          <input v-model="endDate" type="date" class="input input-bordered input-sm w-36" />
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
+          <input
+            v-model="startDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
+          <input
+            v-model="endDate"
+            type="date"
+            class="input input-bordered input-sm w-36"
+          />
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
           <button
             @click="downloadZip"
             class="btn btn-accent btn-sm"
@@ -37,9 +47,13 @@
     </div>
 
     <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="data.docs.length > 0">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="data.docs.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ data.totalDocs }} screenshots | Page {{ data.page }} of {{ data.totalPages }}
+          Total: {{ data.totalDocs }} screenshots | Page {{ data.page }} of
+          {{ data.totalPages }}
         </div>
         <div class="join">
           <button
@@ -53,7 +67,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -88,14 +105,20 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="screenshot in data.docs" :key="screenshot._id" class="hover">
-            <td class="text-base-content/70">
+          <tr
+            v-for="screenshot in data.docs"
+            :key="screenshot._id"
+            class="hover"
+          >
+            <td>
               {{ formatDate(screenshot.createdAt) }}
             </td>
             <td>
-              <router-link :to="'/screenshots/' + screenshot._id" class="link link-primary">{{
-                screenshot._id
-              }}</router-link>
+              <router-link
+                :to="'/screenshots/' + screenshot._id"
+                class="link link-primary"
+                >{{ screenshot._id }}</router-link
+              >
             </td>
             <td>
               <span class="break-all">{{ screenshot.tag || 'N/A' }}</span>
@@ -107,7 +130,7 @@
                 @click="openModal(screenshot._id)"
               >
                 <img
-                  :src="formatImageUrl(screenshot.screenshot)"
+                  :src="`data:image/png;base64,${screenshot.screenshot}`"
                   alt="Preview"
                   class="w-40 h-[90px] object-cover border border-base-300 hover:border-primary transition-colors duration-300 rounded"
                   loading="lazy"
@@ -121,7 +144,11 @@
     </div>
 
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="modalScreenshotId" @close="closeModal" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="modalScreenshotId"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -134,7 +161,11 @@ import { scrollToSection } from '../utils/scroll-utils';
 import { formatDate } from '../utils/date-utils';
 import { downloadBlob } from '../utils/file-utils';
 import { formatImageUrl } from '../utils/format-utils';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 export default {
   name: 'Screenshots',
@@ -232,7 +263,9 @@ export default {
           return;
         }
 
-        const zipWriter = new zip.ZipWriter(new zip.BlobWriter('application/zip'));
+        const zipWriter = new zip.ZipWriter(
+          new zip.BlobWriter('application/zip'),
+        );
 
         for (const s of screenshots) {
           if (!s.screenshot) continue;
@@ -297,16 +330,4 @@ export default {
 };
 </script>
 
-<style scoped>
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-</style>
+<style scoped></style>

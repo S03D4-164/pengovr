@@ -30,9 +30,10 @@
       <div class="bg-base-200 p-4 rounded-box mb-8 border border-base-300">
         <h2 class="text-lg font-bold">
           Target:
-          <span class="badge badge-outline badge-lg uppercase ml-2 brightness-75">{{
-            targetType
-          }}</span>
+          <span
+            class="badge badge-outline badge-lg uppercase ml-2 brightness-75"
+            >{{ targetType }}</span
+          >
           <span class="font-mono text-sm ml-2 opacity-70">{{ targetId }}</span>
         </h2>
       </div>
@@ -58,13 +59,17 @@
           <div>
             <h3 class="font-bold">Delete the {{ targetType }} itself</h3>
             <div class="text-sm">
-              If checked, the main {{ targetType }} record will be permanently deleted after
-              removing selected data.
+              If checked, the main {{ targetType }} record will be permanently
+              deleted after removing selected data.
             </div>
           </div>
         </div>
         <div class="flex-none">
-          <input type="checkbox" v-model="removeTargetRecord" class="checkbox checkbox-warning" />
+          <input
+            type="checkbox"
+            v-model="removeTargetRecord"
+            class="checkbox checkbox-warning"
+          />
         </div>
       </div>
 
@@ -72,9 +77,12 @@
         <!-- Payloads Section -->
         <div v-if="payloads.length > 0" class="mb-10">
           <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="badge badge-primary">{{ payloads.length }}</span> Payloads
+            <span class="badge badge-primary">{{ payloads.length }}</span>
+            Payloads
           </h3>
-          <div class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200">
+          <div
+            class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200"
+          >
             <table class="table table-zebra w-full">
               <thead>
                 <tr>
@@ -94,7 +102,11 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="payload in payloads" :key="payload._id" class="hover">
+                <tr
+                  v-for="payload in payloads"
+                  :key="payload._id"
+                  class="hover"
+                >
                   <td class="text-center">
                     <input
                       type="checkbox"
@@ -103,7 +115,9 @@
                       :value="payload._id"
                     />
                   </td>
-                  <td class="text-sm opacity-70">{{ formatDate(payload.createdAt) }}</td>
+                  <td class="text-sm opacity-70">
+                    {{ formatDate(payload.createdAt) }}
+                  </td>
                   <td>
                     <router-link
                       :to="'/payloads/' + payload._id"
@@ -111,7 +125,9 @@
                       >{{ payload._id }}</router-link
                     >
                   </td>
-                  <td class="font-mono text-sm opacity-70">{{ payload.md5 }}</td>
+                  <td class="font-mono text-sm opacity-70">
+                    {{ payload.md5 }}
+                  </td>
                   <td class="text-sm">{{ formatBytes(payload.size || 0) }}</td>
                   <td>
                     <span
@@ -130,9 +146,12 @@
         <!-- Responses Section -->
         <div v-if="responses.length > 0" class="mb-10">
           <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="badge badge-primary">{{ responses.length }}</span> Responses
+            <span class="badge badge-primary">{{ responses.length }}</span>
+            Responses
           </h3>
-          <div class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200">
+          <div
+            class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200"
+          >
             <table class="table table-zebra w-full">
               <thead>
                 <tr>
@@ -151,7 +170,11 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="response in responses" :key="response._id" class="hover">
+                <tr
+                  v-for="response in responses"
+                  :key="response._id"
+                  class="hover"
+                >
                   <td class="text-center">
                     <input
                       type="checkbox"
@@ -160,7 +183,9 @@
                       :value="response._id"
                     />
                   </td>
-                  <td class="text-sm opacity-70">{{ formatDate(response.createdAt) }}</td>
+                  <td class="text-sm opacity-70">
+                    {{ formatDate(response.createdAt) }}
+                  </td>
                   <td>
                     <router-link
                       :to="'/responses/' + response._id"
@@ -171,7 +196,9 @@
                   <td class="text-sm truncate max-w-md" :title="response.url">
                     {{ displayUrl(response.url) }}
                   </td>
-                  <td class="text-sm">{{ formatBytes(response.text?.length || 0) }}</td>
+                  <td class="text-sm">
+                    {{ formatBytes(response.text?.length || 0) }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -181,9 +208,12 @@
         <!-- Webpages Section -->
         <div v-if="webpages.length > 0" class="mb-10">
           <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="badge badge-primary">{{ webpages.length }}</span> Webpages
+            <span class="badge badge-primary">{{ webpages.length }}</span>
+            Webpages
           </h3>
-          <div class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200">
+          <div
+            class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200"
+          >
             <table class="table table-zebra w-full">
               <thead>
                 <tr>
@@ -203,7 +233,11 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="webpage in webpages" :key="webpage._id" class="hover">
+                <tr
+                  v-for="webpage in webpages"
+                  :key="webpage._id"
+                  class="hover"
+                >
                   <td class="text-center">
                     <input
                       type="checkbox"
@@ -212,7 +246,9 @@
                       :value="webpage._id"
                     />
                   </td>
-                  <td class="text-sm opacity-70">{{ formatDate(webpage.createdAt) }}</td>
+                  <td class="text-sm opacity-70">
+                    {{ formatDate(webpage.createdAt) }}
+                  </td>
                   <td>
                     <router-link
                       :to="'/webpages/' + webpage._id"
@@ -223,7 +259,9 @@
                   <td class="text-sm truncate max-w-md" :title="webpage.url">
                     {{ displayUrl(webpage.url) }}
                   </td>
-                  <td class="text-sm">{{ formatBytes(webpage.content?.length || 0) }}</td>
+                  <td class="text-sm">
+                    {{ formatBytes(webpage.content?.length || 0) }}
+                  </td>
                   <td class="text-center">
                     <img
                       v-if="webpage.thumbnail"
@@ -242,9 +280,12 @@
         <!-- Screenshots Section -->
         <div v-if="screenshots.length > 0" class="mb-10">
           <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="badge badge-primary">{{ screenshots.length }}</span> Screenshots
+            <span class="badge badge-primary">{{ screenshots.length }}</span>
+            Screenshots
           </h3>
-          <div class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200">
+          <div
+            class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200"
+          >
             <table class="table table-zebra w-full">
               <thead>
                 <tr>
@@ -262,7 +303,11 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="screenshot in screenshots" :key="screenshot._id" class="hover">
+                <tr
+                  v-for="screenshot in screenshots"
+                  :key="screenshot._id"
+                  class="hover"
+                >
                   <td class="text-center">
                     <input
                       type="checkbox"
@@ -271,7 +316,9 @@
                       :value="screenshot._id"
                     />
                   </td>
-                  <td class="text-sm opacity-70">{{ formatDate(screenshot.createdAt) }}</td>
+                  <td class="text-sm opacity-70">
+                    {{ formatDate(screenshot.createdAt) }}
+                  </td>
                   <td>
                     <router-link
                       :to="'/screenshots/' + screenshot._id"
@@ -294,7 +341,10 @@
           </div>
         </div>
 
-        <div v-if="noData" class="alert alert-ghost border border-base-300 italic mb-8">
+        <div
+          v-if="noData"
+          class="alert alert-ghost border border-base-300 italic mb-8"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -331,7 +381,11 @@
           <div
             v-if="removeMessage"
             class="alert shadow-sm"
-            :class="removeSuccess ? 'alert-success text-white font-bold' : 'alert-error text-white'"
+            :class="
+              removeSuccess
+                ? 'alert-success text-white font-bold'
+                : 'alert-error text-white'
+            "
           >
             <svg
               v-if="removeSuccess"
@@ -413,17 +467,27 @@ export default {
   },
   computed: {
     allPayloadsSelected() {
-      return this.payloads.length > 0 && this.selectedPayloads.length === this.payloads.length;
+      return (
+        this.payloads.length > 0 &&
+        this.selectedPayloads.length === this.payloads.length
+      );
     },
     allResponsesSelected() {
-      return this.responses.length > 0 && this.selectedResponses.length === this.responses.length;
+      return (
+        this.responses.length > 0 &&
+        this.selectedResponses.length === this.responses.length
+      );
     },
     allWebpagesSelected() {
-      return this.webpages.length > 0 && this.selectedWebpages.length === this.webpages.length;
+      return (
+        this.webpages.length > 0 &&
+        this.selectedWebpages.length === this.webpages.length
+      );
     },
     allScreenshotsSelected() {
       return (
-        this.screenshots.length > 0 && this.selectedScreenshots.length === this.screenshots.length
+        this.screenshots.length > 0 &&
+        this.selectedScreenshots.length === this.screenshots.length
       );
     },
     hasSelection() {
@@ -507,17 +571,20 @@ export default {
       this.removing = true;
       this.removeMessage = '';
       try {
-        const response = await fetch(`/api/remove/${this.targetType}/${this.targetId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            payloads: this.selectedPayloads,
-            responses: this.selectedResponses,
-            webpages: this.selectedWebpages,
-            screenshots: this.selectedScreenshots,
-            removeTarget: this.removeTargetRecord,
-          }),
-        });
+        const response = await fetch(
+          `/api/remove/${this.targetType}/${this.targetId}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              payloads: this.selectedPayloads,
+              responses: this.selectedResponses,
+              webpages: this.selectedWebpages,
+              screenshots: this.selectedScreenshots,
+              removeTarget: this.removeTargetRecord,
+            }),
+          },
+        );
         const result = await response.json();
         if (response.ok) {
           this.removeSuccess = true;
@@ -531,7 +598,8 @@ export default {
           if (this.removeTargetRecord) {
             this.removeMessage += ` Redirecting...`;
             setTimeout(() => {
-              const redirectPath = this.targetType === 'website' ? '/websites' : '/payloads';
+              const redirectPath =
+                this.targetType === 'website' ? '/websites' : '/payloads';
               this.$router.push(redirectPath);
             }, 2000);
             return;
@@ -565,17 +633,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-.table th,
-.table td {
-  border: 1px solid #eee;
-  word-break: break-all;
-  white-space: normal;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

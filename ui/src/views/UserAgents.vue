@@ -1,14 +1,18 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">User Agents</h1>
+    <h1 class="text-3xl font-bold mb-4">User Agents</h1>
 
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card bg-base-100 shadow-sm card-bordered mb-4">
       <div class="card-body">
         <div class="flex justify-between items-center mb-2">
           <h2 class="card-title text-sm opacity-70">Add New User Agent</h2>
           <div class="flex gap-2">
-            <button @click="handleExport" class="btn btn-sm btn-outline">Export JSON</button>
-            <button @click="triggerImport" class="btn btn-sm btn-outline">Import JSON</button>
+            <button @click="handleExport" class="btn btn-sm btn-outline">
+              Export JSON
+            </button>
+            <button @click="triggerImport" class="btn btn-sm btn-outline">
+              Import JSON
+            </button>
             <input
               type="file"
               ref="fileInput"
@@ -45,9 +49,13 @@
     </div>
 
     <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="userAgents.length > 0">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="userAgents.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ total }} user agents | Page {{ currentPage }} of {{ totalPages }}
+          Total: {{ total }} user agents | Page {{ currentPage }} of
+          {{ totalPages }}
         </div>
         <div class="join">
           <button
@@ -61,7 +69,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -74,7 +85,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-          <label>Per page:</label>
+          <label class="whitespace-nowrap">Per page:</label>
           <select
             v-model="limit"
             @change="changeLimit(limit)"
@@ -99,14 +110,28 @@
           <tr v-for="agent in userAgents" :key="agent._id">
             <td class="col-edit">
               <template v-if="editingAgent?._id === agent._id">
-                <button @click="handleUpdate" class="btn btn-primary btn-sm" :disabled="saving">
+                <button
+                  @click="handleUpdate"
+                  class="btn btn-primary btn-sm"
+                  :disabled="saving"
+                >
                   {{ saving ? 'Saving...' : 'Save' }}
                 </button>
-                <button @click="cancelEdit" class="btn btn-ghost btn-sm">Cancel</button>
+                <button @click="cancelEdit" class="btn btn-ghost btn-sm">
+                  Cancel
+                </button>
               </template>
               <template v-else>
-                <button @click="startEdit(agent)" class="btn btn-primary btn-sm">Edit</button>
-                <button @click="deleteAgent(agent._id)" class="btn btn-error btn-sm text-white">
+                <button
+                  @click="startEdit(agent)"
+                  class="btn btn-primary btn-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  @click="deleteAgent(agent._id)"
+                  class="btn btn-error btn-sm text-white"
+                >
                   Delete
                 </button>
               </template>
@@ -137,7 +162,9 @@
                 ></textarea>
               </template>
               <template v-else>
-                <div class="text-sm font-mono break-all opacity-70">{{ agent.userAgent }}</div>
+                <div class="text-sm font-mono break-all">
+                  {{ agent.userAgent }}
+                </div>
               </template>
             </td>
           </tr>
@@ -150,7 +177,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { userAgentApi } from '../api';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 interface UserAgent {
   _id: string;
@@ -178,7 +209,10 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const fetchUserAgents = async () => {
   try {
     loading.value = true;
-    const response = await userAgentApi.getUserAgents(currentPage.value, limit.value);
+    const response = await userAgentApi.getUserAgents(
+      currentPage.value,
+      limit.value,
+    );
     userAgents.value = response.results;
     total.value = response.total;
     totalPages.value = response.totalPages;
@@ -207,7 +241,10 @@ const changeLimit = (newLimit: number) => {
 const handleSubmit = async () => {
   try {
     error.value = '';
-    await userAgentApi.createUserAgent(newAgent.value.name, newAgent.value.userAgent);
+    await userAgentApi.createUserAgent(
+      newAgent.value.name,
+      newAgent.value.userAgent,
+    );
     newAgent.value = { name: '', userAgent: '' };
     currentPage.value = 1;
     await fetchUserAgents();
@@ -260,12 +297,16 @@ const handleExport = async () => {
   try {
     // Fetch all for export (using a large limit)
     const response = await userAgentApi.getUserAgents(1, 1000);
-    const dataToExport = response.results.map(({ name, userAgent }: UserAgent) => ({
-      name,
-      userAgent,
-    }));
+    const dataToExport = response.results.map(
+      ({ name, userAgent }: UserAgent) => ({
+        name,
+        userAgent,
+      }),
+    );
 
-    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -335,19 +376,6 @@ onMounted(() => {
 }
 
 /* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td,
-.textarea,
-.input {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .textarea,
-[data-theme='dark'] .input {
-  border-color: rgba(255, 255, 255, 0.5);
-}
 
 .col-edit {
   width: 15%;

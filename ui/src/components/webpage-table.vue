@@ -18,20 +18,14 @@
                   class="link link-primary text-sm"
                   >ID: {{ webpage._id }}</router-link
                 >
-                <div class="text-sm opacity-60">
+                <div class="text-sm opacity-70">
                   {{ getRelativeTime(webpage.createdAt) }}
                   <span class="opacity-50 ml-1"
                     >({{ formatDate(webpage.createdAt) }})</span
                   >
-                  <span v-if="webpage.relatedDate" class="opacity-70 ml-1">
-                    / Rel: {{ getRelativeTime(webpage.relatedDate) }}
-                    <span class="opacity-50 ml-1"
-                      >({{ formatDate(webpage.relatedDate) }})</span
-                    >
-                  </span>
                 </div>
               </div>
-              <div class="text-sm break-all mt-1" :title="webpage.input">
+              <div class="text-base break-all mt-1" :title="webpage.input">
                 {{ displayUrl(webpage.input) }}
               </div>
               <div
@@ -48,7 +42,7 @@
                           {{ key }}:
                         </td>
                         <td
-                          class="py-0.5 px-2 text-sm break-all font-mono border-none leading-tight"
+                          class="py-0.5 px-2 text-sm break-all border-none leading-tight"
                         >
                           {{ value }}
                         </td>
@@ -71,7 +65,7 @@
             </div>
             <div class="flex flex-col gap-0.5 mb-2 mt-1">
               <div
-                class="text-sm break-all"
+                class="text-base break-all"
                 :class="
                   webpage.url && webpage.url !== webpage.input
                     ? 'text-warning opacity-100'
@@ -100,16 +94,16 @@
                 }}</span
               >
             </div>
-            <div v-if="webpage.remoteAddress?.ip" class="text-sm mt-1">
+            <div v-if="webpage.remoteAddress?.ip" class="text-base mt-1">
               IP: {{ webpage.remoteAddress.ip }}
               <span
                 v-if="webpage.remoteAddress.geoip?.[0]?.country"
-                class="opacity-60"
+                class="opacity-70"
               >
                 ({{ webpage.remoteAddress.geoip[0].country }})
               </span>
             </div>
-            <div v-if="webpage.securityDetails" class="text-sm opacity-60 mt-1">
+            <div v-if="webpage.securityDetails" class="text-sm opacity-70 mt-1">
               🔒 {{ webpage.securityDetails.issuer }} ({{
                 getRelativeTime(webpage.securityDetails.validFrom)
               }})
