@@ -34,3 +34,11 @@ echo "S3_SECRET_KEY=$S3_SECRET_ACCESS_KEY" >> "$ENV_FILE"
 #echo "CONTAINER_IMAGE_URI=$CONTAINER_IMAGE_URI" >> "$ENV_FILE"
 
 echo "✅ Updated $ENV_FILE with deployment outputs"
+
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+REGION=us-east-1
+REPO_NAME=cdk-hnb659fds-container-assets-${ACCOUNT_ID}-${REGION}
+aws ecr put-lifecycle-policy \
+  --repository-name "${REPO_NAME}" \
+  --region "${REGION}" \
+  --lifecycle-policy-text '{"rules":[{"rulePriority":1,"description":"Keep last 1","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":1},"action":{"type":"expire"}}]}'

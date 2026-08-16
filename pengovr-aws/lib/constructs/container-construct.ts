@@ -114,7 +114,7 @@ export class ContainerConstruct extends Construct {
       period: cdk.Duration.seconds(30),
     });
     
-    const max = 10;
+    const max = 20;
     // オートスケーリング設定
     const scalableTarget = this.fargateService.autoScaleTaskCount({
       minCapacity: 0,
@@ -128,7 +128,8 @@ export class ContainerConstruct extends Construct {
         { upper: 0, change: 0 },
         { lower: 1, upper: 5, change: 1 },
         { lower: 5, upper: 10, change: 5 },
-        { lower: 10, change: max },
+        { lower: 10, upper: 20, change: 10 },
+        { lower: 20, change: max },
       ],
       adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
       evaluationPeriods: 1,
@@ -145,7 +146,7 @@ export class ContainerConstruct extends Construct {
         { lower: 1, change: 0 },
       ],
       adjustmentType: applicationautoscaling.AdjustmentType.EXACT_CAPACITY,
-      evaluationPeriods: 3,
+      evaluationPeriods: 5,
       metricAggregationType:
         applicationautoscaling.MetricAggregationType.AVERAGE,
       cooldown: cdk.Duration.seconds(300),
