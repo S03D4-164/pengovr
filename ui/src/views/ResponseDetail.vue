@@ -1,220 +1,24 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4" v-if="response">
-    <div class="flex items-center justify-between mb-6 gap-4">
+    <div class="flex items-center justify-between mb-4 gap-4">
       <h1 class="text-3xl font-bold break-all">{{ response.url }}</h1>
       <BackBtn />
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Request Information -->
-      <div
-        id="request-info"
-        class="card bg-base-100 shadow-sm card-bordered"
-        v-if="request"
-      >
-        <div class="card-body p-4">
-          <h2 class="card-title text-base opacity-70">Request Information</h2>
-          <div class="overflow-x-auto">
-            <table class="table table-sm w-full">
-              <tbody>
-                <tr>
-                  <th class="w-1/3 opacity-60">ID</th>
-                  <td>
-                    <router-link
-                      :to="`/requests/${request._id}`"
-                      class="link link-primary font-mono text-sm"
-                      >{{ request._id }}</router-link
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">URL</th>
-                  <td class="break-all text-sm">{{ request.url }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Method</th>
-                  <td>
-                    <span class="badge badge-ghost font-bold">{{
-                      request.method
-                    }}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Resource Type</th>
-                  <td class="text-sm">{{ request.resourceType }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Navigation</th>
-                  <td>{{ request.isNavigationRequest ? 'Yes' : 'No' }}</td>
-                </tr>
-                <tr v-if="request.interceptionId">
-                  <th class="opacity-60">Interception ID</th>
-                  <td class="font-mono text-sm opacity-70">
-                    {{ request.interceptionId }}
-                  </td>
-                </tr>
-                <tr v-if="request.webpage">
-                  <th class="opacity-60">Webpage</th>
-                  <td>
-                    <router-link
-                      :to="`/webpages/${request.webpage._id}`"
-                      class="link link-secondary text-sm font-mono"
-                      >{{ request.webpage._id }}</router-link
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Response Information -->
-      <div id="response-info" class="card bg-base-100 shadow-sm card-bordered">
-        <div class="card-body p-4">
-          <h2 class="card-title text-base opacity-70">Response Information</h2>
-          <div class="overflow-x-auto">
-            <table class="table table-sm w-full">
-              <tbody>
-                <tr>
-                  <th class="w-1/3 opacity-60">ID</th>
-                  <td class="font-mono text-sm opacity-70">
-                    {{ response._id }}
-                  </td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Raw JSON</th>
-                  <td>
-                    <a
-                      :href="`/api/responses/${response._id}`"
-                      target="_blank"
-                      class="link link-primary text-sm font-mono"
-                      >/api/responses/{{ response._id }}</a
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">URL</th>
-                  <td class="break-all text-sm">{{ response.url }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Status</th>
-                  <td>
-                    <span
-                      :class="getStatusClass(response.status)"
-                      class="badge badge-md font-bold text-white"
-                    >
-                      {{ response.status }} {{ response.statusText }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">OK</th>
-                  <td>{{ response.ok }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">MIME Type</th>
-                  <td class="text-sm">{{ response.mimeType }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Encoding</th>
-                  <td class="text-sm">{{ response.encoding }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Created</th>
-                  <td class="text-sm">{{ formatDate(response.createdAt) }}</td>
-                </tr>
-                <tr>
-                  <th class="opacity-60">Content Length</th>
-                  <td>{{ response.text?.length || 0 }} bytes</td>
-                </tr>
-                <tr v-if="response.interceptionId">
-                  <th class="opacity-60">Interception ID</th>
-                  <td class="font-mono text-sm opacity-70">
-                    {{ response.interceptionId }}
-                  </td>
-                </tr>
-                <tr v-if="response.webpage">
-                  <th class="opacity-60">Webpage</th>
-                  <td>
-                    <router-link
-                      :to="`/webpages/${response.webpage._id}`"
-                      class="link link-primary text-sm font-mono"
-                      >{{ response.webpage._id }}</router-link
-                    >
-                  </td>
-                </tr>
-                <tr v-if="response.request">
-                  <th class="opacity-60">Request</th>
-                  <td>
-                    <router-link
-                      :to="`/requests/${response.request._id}`"
-                      class="link link-primary text-sm font-mono"
-                      >{{ response.request._id }}</router-link
-                    >
-                  </td>
-                </tr>
-                <tr v-if="response.payload">
-                  <th class="opacity-60">Payload</th>
-                  <td>
-                    <router-link
-                      :to="`/payloads/${response.payload._id || response.payload}`"
-                      class="link link-primary text-sm font-mono"
-                      >{{
-                        response.payload._id || response.payload
-                      }}</router-link
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+    <RequestResponseInfo
+      class="mb-8"
+      :request="request"
+      :response="response"
+      :show-response-raw-json="true"
+    />
 
     <!-- Headers Section -->
-    <div
+    <HeadersSection
       id="headers-section"
-      class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-    >
-      <div
-        class="card bg-base-100 shadow-sm card-bordered"
-        v-if="request?.headers && Object.keys(request.headers).length"
-      >
-        <div class="card-body p-4">
-          <h2 class="card-title text-base opacity-70">Request Headers</h2>
-          <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra w-full">
-              <tbody>
-                <tr v-for="(value, key) in request.headers" :key="key">
-                  <th class="opacity-70 w-1/3">{{ key }}</th>
-                  <td class="break-all font-mono text-sm">{{ value }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div
-        class="card bg-base-100 shadow-sm card-bordered"
-        v-if="response?.headers && Object.keys(response.headers).length"
-      >
-        <div class="card-body p-4">
-          <h2 class="card-title text-base opacity-70">Response Headers</h2>
-          <div class="overflow-x-auto">
-            <table class="table table-sm table-zebra w-full">
-              <tbody>
-                <tr v-for="(value, key) in response.headers" :key="key">
-                  <th class="opacity-70 w-1/3">{{ key }}</th>
-                  <td class="break-all font-mono text-sm">{{ value }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+      class="mb-8"
+      :request-headers="request?.headers || {}"
+      :response-headers="response?.headers || {}"
+    />
 
     <!-- Network & Security Section -->
     <NetworkSecurityCard
@@ -254,6 +58,8 @@ import BackBtn from '../components/back-btn.vue';
 import FixedNav from '../components/fixed-nav.vue';
 import BodyAnalysisCard from '../components/body-analysis-card.vue';
 import NetworkSecurityCard from '../components/network-security-card.vue';
+import HeadersSection from '../components/headers-section.vue';
+import RequestResponseInfo from '../components/request-response-info.vue';
 import { scrollToSection } from '../utils/scroll-utils';
 import { formatDate, getRelativeTime } from '../utils/date-utils';
 
@@ -264,6 +70,8 @@ export default {
     BackBtn,
     FixedNav,
     BodyAnalysisCard,
+    HeadersSection,
+    RequestResponseInfo,
   },
   props: ['id'],
   data() {
@@ -301,15 +109,6 @@ export default {
       } catch (error) {
         console.error('Error fetching request:', error);
       }
-    },
-    getStatusClass(status) {
-      const base = 'badge badge-md font-bold ';
-      if (status >= 200 && status < 300)
-        return base + 'badge-success text-white';
-      if (status >= 300 && status < 400) return base + 'badge-warning';
-      if (status >= 400 && status < 500) return base + 'badge-error text-white';
-      if (status >= 500) return base + 'badge-error text-white';
-      return base + 'badge-ghost';
     },
   },
 };
