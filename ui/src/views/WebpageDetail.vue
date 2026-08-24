@@ -30,7 +30,7 @@
                 <a
                   :href="`/api/webpages/${webpage._id}`"
                   target="_blank"
-                  class="link link-primary text-sm font-mono"
+                  class="link link-primary text-base"
                   >/api/webpages/{{ webpage._id }}</a
                 >
               </td>
@@ -66,7 +66,7 @@
             <template v-for="(value, key) in webpage.option" :key="key">
               <tr v-if="value">
                 <th class="w-1/4 opacity-60 uppercase text-sm">{{ key }}</th>
-                <td class="font-mono text-sm">{{ value }}</td>
+                <td class="text-sm">{{ value }}</td>
               </tr>
             </template>
           </InfoTable>
@@ -112,16 +112,16 @@
           </div>
 
           <h3 class="text-sm font-bold opacity-50 uppercase mt-4 mb-2">
-            Analysis Result
+            Result
           </h3>
           <InfoTable>
             <tr>
               <th class="w-1/6 opacity-60">URL</th>
-              <td class="break-all text-sm">
+              <td class="break-all text-base">
                 <span
                   :class="
                     webpage.url && webpage.url !== webpage.input
-                      ? 'text-warning font-semibold'
+                      ? 'text-warning'
                       : ''
                   "
                 >
@@ -140,7 +140,7 @@
                   :class="getStatusClass(webpage.status)"
                   class="badge text-white"
                 >
-                  {{ webpage.status || '???' }}
+                  {{ webpage.status || 'N/A' }}
                 </span>
               </td>
             </tr>
@@ -180,175 +180,198 @@
       <InfoCard
         id="requests"
         class="mb-8"
-        v-if="webpage.requests?.length || webpage.responses?.length"
+        v-if="
+          webpage.requests?.length ||
+          webpage.responses?.length ||
+          isLoadingRequests
+        "
         :title="`Requests & Responses (Req: ${webpage.requests?.length || 0}, Res: ${webpage.responses?.length || 0})`"
       >
         <template #actions>
           <div class="flex flex-wrap gap-2 items-center">
-            <!-- Filters -->
-            <input
-              v-model="filterIp"
-              type="text"
-              placeholder="Filter IP..."
-              class="input input-bordered input-xs w-32"
-            />
-            <input
-              v-model="filterText"
-              type="text"
-              placeholder="Filter Body Text..."
-              class="input input-bordered input-xs w-48"
-            />
-            <label class="label cursor-pointer gap-1 p-0 select-none">
-              <span class="label-text text-xs">Nav Only</span>
+            <!-- Loading Indicator -->
+            <div v-if="isLoadingRequests" class="flex items-center gap-2">
+              <span class="loading loading-spinner loading-sm"></span>
+              <span class="text-sm opacity-70"
+                >Loading requests & responses...</span
+              >
+            </div>
+
+            <!-- Filters (hidden while loading) -->
+            <template v-else>
               <input
-                v-model="filterNavigationOnly"
-                type="checkbox"
-                class="checkbox checkbox-primary checkbox-xs"
+                v-model="filterIp"
+                type="text"
+                placeholder="Filter IP..."
+                class="input input-bordered input-base w-32"
               />
-            </label>
+              <input
+                v-model="filterText"
+                type="text"
+                placeholder="Filter Body Text..."
+                class="input input-bordered input-base w-48"
+              />
+              <label class="label cursor-pointer gap-1 p-0 select-none">
+                <span class="label-text text-base">Nav Only</span>
+                <input
+                  v-model="filterNavigationOnly"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-xs"
+                />
+              </label>
 
-            <!-- Pagination Controls -->
-            <div class="join ml-2" v-if="totalRequestPages > 1">
-              <button
-                class="join-item btn btn-xs"
-                @click="requestPage--"
-                :disabled="requestPage <= 1"
-              >
-                «
-              </button>
-              <button class="join-item btn btn-xs no-animation cursor-default">
-                Page {{ requestPage }} / {{ totalRequestPages }}
-                <span class="opacity-50 ml-1"
-                  >({{ filteredMatchedRequests.length }} items)</span
+              <!-- Pagination Controls -->
+              <div class="join ml-2" v-if="totalRequestPages > 1">
+                <button
+                  class="join-item btn btn-xs"
+                  @click="requestPage--"
+                  :disabled="requestPage <= 1"
                 >
-              </button>
-              <button
-                class="join-item btn btn-xs"
-                @click="requestPage++"
-                :disabled="requestPage >= totalRequestPages"
-              >
-                »
-              </button>
-            </div>
-            <div v-else class="text-xs opacity-50 ml-2">
-              {{ filteredMatchedRequests.length }} items
-            </div>
+                  «
+                </button>
+                <button
+                  class="join-item btn btn-xs no-animation cursor-default"
+                >
+                  Page {{ requestPage }} / {{ totalRequestPages }}
+                  <span class="opacity-50 ml-1"
+                    >({{ filteredMatchedRequests.length }} items)</span
+                  >
+                </button>
+                <button
+                  class="join-item btn btn-xs"
+                  @click="requestPage++"
+                  :disabled="requestPage >= totalRequestPages"
+                >
+                  »
+                </button>
+              </div>
+              <div v-else class="text-xs opacity-50 ml-2">
+                {{ filteredMatchedRequests.length }} items
+              </div>
 
-            <button
-              @click="resetRequestFilters"
-              class="btn btn-xs btn-ghost"
-              v-if="filterIp || filterText || filterNavigationOnly"
-            >
-              Clear
-            </button>
+              <button
+                @click="resetRequestFilters"
+                class="btn btn-xs btn-ghost"
+                v-if="filterIp || filterText || filterNavigationOnly"
+              >
+                Clear
+              </button>
+            </template>
           </div>
         </template>
 
-        <InfoTable zebra class="bg-base-200/10 rounded">
-          <template #header>
-            <tr>
-              <th class="w-1/12">#</th>
-              <th class="w-5/12">URL</th>
-              <th class="w-1/12">Status</th>
-              <th class="w-2/12">Remote / Country</th>
-              <th class="w-1/12">Size</th>
-              <th class="w-2/12">YARA / Payload</th>
-            </tr>
-          </template>
-          <tr
-            v-for="(item, idx) in paginatedRequests"
-            :key="item.request?._id || item.response?._id"
-          >
-            <td>
-              <router-link
-                v-if="item.request"
-                :to="
-                  item.response
-                    ? `/requests/${item.request._id}?responseId=${item.response._id}`
-                    : `/requests/${item.request._id}`
-                "
-                class="btn btn-primary btn-sm font-mono"
-                >{{ (requestPage - 1) * requestLimit + idx + 1 }}</router-link
-              >
-              <span v-else class="opacity-30 px-3">{{
-                (requestPage - 1) * requestLimit + idx + 1
-              }}</span>
-            </td>
-            <td class="max-w-md">
-              <div class="flex flex-col gap-0.5">
-                <div
-                  class="text-sm break-all font-medium"
-                  :class="{ 'text-primary': item.request?.isNavigationRequest }"
-                >
-                  {{ displayUrl(item.request?.url || item.response?.url, 200) }}
-                </div>
-                <div
-                  v-if="item.request"
-                  class="flex items-center gap-2 opacity-80 text-sm"
-                >
-                  <span>
-                    {{ item.request.method }} {{ item.request.resourceType }}
-                  </span>
-                  <span
-                    v-if="item.request?.failure?.errorText"
-                    class="badge badge-error badge-sm text-white font-bold"
-                    :title="item.request.failure.errorText"
-                  >
-                    {{ item.request.failure.errorText }}
-                  </span>
-                </div>
-              </div>
-            </td>
-            <td>
-              <router-link
-                v-if="item.response?._id"
-                :to="`/responses/${item.response._id}`"
-                :class="getStatusClass(item.response.status)"
-                class="badge badge-md text-white hover:opacity-80 transition-opacity"
-                >{{ item.response.status }}</router-link
-              >
-            </td>
-            <td class="text-sm opacity-70">
-              <div v-if="item.response?.remoteAddress?.ip">
-                {{ item.response.remoteAddress.ip }}
-                <span
-                  v-if="item.response?.remoteAddress?.geoip?.[0]?.country"
-                  class="ml-1 opacity-60"
-                >
-                  ({{ item.response.remoteAddress.geoip[0].country }})
-                </span>
-              </div>
-            </td>
-            <td class="text-sm opacity-70">
-              <span v-if="item.response?.text">
-                {{ formatBytes(item.response.text.length) }}
-              </span>
-            </td>
-            <td>
-              <div class="flex flex-col gap-1">
-                <div
-                  v-if="item.response?.yara?.rules?.length"
-                  class="flex flex-wrap gap-1"
-                >
-                  <span
-                    v-for="rule in item.response.yara.rules"
-                    :key="rule.id"
-                    class="badge badge-error badge-md text-white border-none"
-                  >
-                    {{ rule.id }}
-                  </span>
-                </div>
+        <!-- Table (hidden while loading) -->
+        <template v-if="!isLoadingRequests">
+          <InfoTable zebra class="bg-base-200/10 rounded">
+            <template #header>
+              <tr>
+                <th class="w-1/12">#</th>
+                <th class="w-5/12">URL</th>
+                <th class="w-1/12">Status</th>
+                <th class="w-2/12">Remote / Country</th>
+                <th class="w-1/12">Size</th>
+                <th class="w-2/12">YARA / Payload</th>
+              </tr>
+            </template>
+            <tr
+              v-for="(item, idx) in paginatedRequests"
+              :key="item.request?._id || item.response?._id"
+            >
+              <td>
                 <router-link
-                  v-if="item.response?.payload"
-                  :to="`/payloads/${item.response.payload._id || item.response.payload}`"
-                  class="badge badge-warning badge-md text-white font-bold border-none"
+                  v-if="item.request"
+                  :to="
+                    item.response
+                      ? `/requests/${item.request._id}?responseId=${item.response._id}`
+                      : `/requests/${item.request._id}`
+                  "
+                  class="btn btn-primary btn-sm font-mono"
+                  >{{ (requestPage - 1) * requestLimit + idx + 1 }}</router-link
                 >
-                  PAYLOAD
-                </router-link>
-              </div>
-            </td>
-          </tr>
-        </InfoTable>
+                <span v-else class="opacity-30 px-3">{{
+                  (requestPage - 1) * requestLimit + idx + 1
+                }}</span>
+              </td>
+              <td class="max-w-md">
+                <div class="flex flex-col gap-0.5">
+                  <div
+                    class="text-base break-all font-medium"
+                    :class="{
+                      'text-primary': item.request?.isNavigationRequest,
+                    }"
+                  >
+                    {{
+                      displayUrl(item.request?.url || item.response?.url, 200)
+                    }}
+                  </div>
+                  <div
+                    v-if="item.request"
+                    class="flex items-center gap-2 opacity-80 text-sm"
+                  >
+                    <span>
+                      {{ item.request.method }} {{ item.request.resourceType }}
+                    </span>
+                    <span
+                      v-if="item.request?.failure?.errorText"
+                      class="badge badge-error badge-sm text-white font-bold"
+                      :title="item.request.failure.errorText"
+                    >
+                      {{ item.request.failure.errorText }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <router-link
+                  v-if="item.response?._id"
+                  :to="`/responses/${item.response._id}`"
+                  :class="getStatusClass(item.response.status)"
+                  class="badge badge-md text-white hover:opacity-80 transition-opacity"
+                  >{{ item.response.status }}</router-link
+                >
+              </td>
+              <td class="text-base">
+                <div v-if="item.response?.remoteAddress?.ip">
+                  {{ item.response.remoteAddress.ip }}
+                  <span
+                    v-if="item.response?.remoteAddress?.geoip?.[0]?.country"
+                    class="ml-1 opacity-60"
+                  >
+                    ({{ item.response.remoteAddress.geoip[0].country }})
+                  </span>
+                </div>
+              </td>
+              <td class="text-sm opacity-70">
+                <span v-if="item.response?.text">
+                  {{ formatBytes(item.response.text.length) }}
+                </span>
+              </td>
+              <td>
+                <div class="flex flex-col gap-1">
+                  <div
+                    v-if="item.response?.yara?.rules?.length"
+                    class="flex flex-wrap gap-1"
+                  >
+                    <span
+                      v-for="rule in item.response.yara.rules"
+                      :key="rule.id"
+                      class="badge badge-error badge-md text-white border-none"
+                    >
+                      {{ rule.id }}
+                    </span>
+                  </div>
+                  <router-link
+                    v-if="item.response?.payload"
+                    :to="`/payloads/${item.response.payload._id || item.response.payload}`"
+                    class="badge badge-warning badge-md text-white font-bold border-none"
+                  >
+                    PAYLOAD
+                  </router-link>
+                </div>
+              </td>
+            </tr>
+          </InfoTable>
+        </template>
       </InfoCard>
 
       <!-- Body Section -->
@@ -426,14 +449,14 @@ export default {
       filterIp: '',
       filterText: '',
       filterNavigationOnly: false,
+      // Loading states
+      isLoadingRequests: false,
+      requestsResponsesLoaded: false,
     };
   },
   async created() {
-    // fetchWebpage 内で fetchWebsite を呼ぶようにするか、
-    // 直列 await を避けることで表示までのブロッキングを減らします
-    this.fetchWebpage().then(() => {
-      this.fetchWebsite();
-    });
+    // 並列実行で両方のデータを同時に取得
+    await Promise.all([this.fetchWebpage(), this.fetchWebsite()]);
   },
   unmounted() {
     this.isUnmounted = true;
@@ -451,6 +474,14 @@ export default {
 
       const matched = [];
       const usedResponses = new Set();
+
+      // レスポンスをマップで高速化
+      const responseMap = new Map();
+      if (this.webpage?.responses) {
+        for (const r of this.webpage.responses) {
+          responseMap.set(r._id?.toString(), r);
+        }
+      }
 
       // 1. まずrequestsとresponsesをマッチング
       if (this.webpage?.requests) {
@@ -548,22 +579,22 @@ export default {
       immediate: true,
       handler(newVal) {
         if (newVal) {
+          // スクロール復元をスキップして即表示
+          this.isContentVisible = true;
+
+          // スクロール復元は次のチックで非同期実行
           this.$nextTick(() => {
             const scrollY = parseInt(
               sessionStorage.getItem('webpageDetailScrollY') || '0',
             );
             if (scrollY > 100) {
-              // 小さなスクロールなら即表示
               console.log('Restoring scroll position:', scrollY);
               setTimeout(() => {
-                // コンポーネントがアンマウントされている場合は状態を更新しない（parentNodeエラー防止）
-                if (this.isUnmounted) return;
-                window.scrollTo(0, scrollY);
-                sessionStorage.removeItem('webpageDetailScrollY');
-                this.isContentVisible = true;
-              }, 50);
-            } else {
-              this.isContentVisible = true;
+                if (!this.isUnmounted) {
+                  window.scrollTo(0, scrollY);
+                  sessionStorage.removeItem('webpageDetailScrollY');
+                }
+              }, 0); // 最小限の遅延
             }
           });
         }
@@ -590,6 +621,16 @@ export default {
         console.log('Fetching webpage with ID:', this.id);
         this.webpage = await webpageApi.getWebpage(this.id);
         console.log('Webpage data received:', this.webpage);
+
+        // requests と responses が empty の場合は別途取得
+        if (
+          (!this.webpage.requests || this.webpage.requests.length === 0) &&
+          (!this.webpage.responses || this.webpage.responses.length === 0)
+        ) {
+          console.log('Fetching requests and responses separately...');
+          this.fetchRequestsResponses();
+        }
+
         if (this.webpage.screenshots) {
           console.log(
             'Screenshots in webpage:',
@@ -599,12 +640,6 @@ export default {
             })),
           );
         }
-        /*
-        console.log('Fetched webpage data:', this.webpage);
-        console.log('Screenshots array:', this.webpage.screenshots);
-        console.log('Main screenshot:', this.webpage.screenshot);
-        console.log('YARA data:', this.webpage.yara);
-        */
 
         // Check if screenshots are properly populated
         if (this.webpage.screenshots?.length > 0) {
@@ -612,15 +647,38 @@ export default {
             'First screenshot full field:',
             this.webpage.screenshots[0].full,
           );
-          //console.log('First screenshot full.screenshot:', this.webpage.screenshots[0].full?.screenshot);
         }
 
-        // Compute favicon hashes
+        // ハッシュ計算を非同期で実行（UIブロッキングなし）
         if (this.webpage.favicon?.length > 0) {
-          await this.computeFaviconHashes();
+          this.computeFaviconHashes(); // await しない
         }
       } catch (error) {
         console.error('Error fetching webpage:', error);
+      }
+    },
+    async fetchRequestsResponses() {
+      try {
+        this.isLoadingRequests = true;
+        const result = await webpageApi.getWebpageRequestsResponses(this.id);
+        if (this.webpage) {
+          this.webpage.requests = result.requests;
+          this.webpage.responses = result.responses;
+          this.requestsResponsesLoaded = true;
+          console.log('Requests and responses loaded:', {
+            requestCount: result.requests?.length || 0,
+            responseCount: result.responses?.length || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching requests and responses:', error);
+        // Fallback: set empty arrays
+        if (this.webpage) {
+          this.webpage.requests = [];
+          this.webpage.responses = [];
+        }
+      } finally {
+        this.isLoadingRequests = false;
       }
     },
     async computeFaviconHashes() {
@@ -744,19 +802,6 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル、カードの枠線カスタマイズ */
-.card-bordered,
-.mockup-code {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .card-bordered,
-[data-theme='dark'] .mockup-code {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 
 pre {

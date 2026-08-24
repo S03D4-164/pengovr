@@ -3,7 +3,7 @@
     <div class="flex flex-col lg:flex-row gap-6">
       <!-- Main Area -->
       <div class="flex-1 flex flex-col gap-4">
-        <h1 class="text-3xl font-bold mb-6">Deobfuscator</h1>
+        <h1 class="text-3xl font-bold">Deobfuscator</h1>
 
         <textarea
           v-model="inputText"
@@ -71,7 +71,7 @@
               class="btn btn-outline btn-primary btn-sm text-sm"
               :disabled="loading"
             >
-              Deobfuscate.io
+              Deobfuscate
             </button>
             <button
               @click="aiExplain('gemini')"
@@ -420,19 +420,6 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* 入力エリア、結果エリア、テーブル等の境界線スタイルを統一 */
-.input-textarea,
-.result-display,
-.result-placeholder {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .input-textarea,
-[data-theme='dark'] .result-display,
-[data-theme='dark'] .result-placeholder {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 
 pre {

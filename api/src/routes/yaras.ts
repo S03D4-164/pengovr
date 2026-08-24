@@ -19,7 +19,7 @@ interface YaraResponse {
 /**
  * Synchronize all valid YARA rules from MongoDB to S3 as a JSON file.
  */
-async function syncYaraRulesToS3() {
+export async function syncYaraRulesToS3() {
   try {
     const rules = await YaraModel.find({ valid: true });
     const rulesJson = JSON.stringify(rules);

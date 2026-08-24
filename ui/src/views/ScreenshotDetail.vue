@@ -15,7 +15,9 @@
               <tbody>
                 <tr>
                   <th class="text-base-content/50 w-1/3">ID</th>
-                  <td class="font-mono text-sm break-all">{{ screenshot._id }}</td>
+                  <td class="font-mono text-sm break-all">
+                    {{ screenshot._id }}
+                  </td>
                 </tr>
                 <tr>
                   <th class="opacity-50">Raw JSON</th>
@@ -80,11 +82,18 @@
     </div>
 
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="id" @close="showModal = false" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="id"
+      @close="showModal = false"
+    />
   </div>
 
   <!-- Loading State -->
-  <div v-else-if="loading" class="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+  <div
+    v-else-if="loading"
+    class="flex flex-col items-center justify-center min-h-[50vh] gap-4"
+  >
     <span class="loading loading-spinner loading-lg text-primary"></span>
     <p class="text-base-content/60">Loading screenshot details...</p>
   </div>
@@ -172,22 +181,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル、カード、コードブロック、画像の枠線カスタマイズ */
-.table th,
-.table td,
-.card-bordered,
-.mockup-code,
-.border-preview {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .card-bordered,
-[data-theme='dark'] .mockup-code,
-[data-theme='dark'] .border-preview {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

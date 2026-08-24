@@ -7,13 +7,21 @@
       class="flex items-center justify-between mb-6 bg-base-100 p-4 rounded-box shadow-sm border border-base-200"
     >
       <div class="flex items-center gap-4">
-        <span class="text-base-content/70 font-medium">Total: {{ webpages.length }} webpages</span>
+        <span class="text-base-content/70 font-medium"
+          >Total: {{ webpages.length }} webpages</span
+        >
         <div class="flex items-center gap-2">
-          <span v-if="autoRefreshing" class="badge badge-info badge-outline gap-2 py-3 px-3">
+          <span
+            v-if="autoRefreshing"
+            class="badge badge-info badge-outline gap-2 py-3 px-3"
+          >
             <span class="loading loading-spinner loading-sm"></span>
             Auto-refreshing
           </span>
-          <span v-else class="badge badge-success badge-outline gap-2 py-3 px-3">
+          <span
+            v-else
+            class="badge badge-success badge-outline gap-2 py-3 px-3"
+          >
             <span class="text-sm font-bold">✓</span>
             Completed
           </span>
@@ -22,7 +30,9 @@
     </div>
 
     <!-- Table Container -->
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200">
+    <div
+      class="overflow-x-auto bg-base-100 rounded-box shadow border border-base-200"
+    >
       <table class="table table-zebra w-full">
         <thead>
           <tr>
@@ -45,10 +55,15 @@
                   </router-link>
                   <div class="text-sm opacity-60">
                     {{ getRelativeTime(webpage.createdAt) }}
-                    <span class="opacity-50 ml-1">({{ formatDate(webpage.createdAt) }})</span>
+                    <span class="opacity-50 ml-1"
+                      >({{ formatDate(webpage.createdAt) }})</span
+                    >
                   </div>
                 </div>
-                <div class="text-sm break-all opacity-80 mt-1" :title="webpage.input">
+                <div
+                  class="text-sm break-all opacity-80 mt-1"
+                  :title="webpage.input"
+                >
                   {{ truncateUrl(webpage.input) }}
                 </div>
 
@@ -58,7 +73,10 @@
                 >
                   <table class="table table-sm w-full bg-transparent">
                     <tbody class="border-none">
-                      <template v-for="(value, key) in webpage.option" :key="key">
+                      <template
+                        v-for="(value, key) in webpage.option"
+                        :key="key"
+                      >
                         <tr v-if="value" class="border-none">
                           <td
                             class="py-0.5 px-2 font-bold opacity-50 text-sm w-32 align-top uppercase border-none"
@@ -88,7 +106,10 @@
                 {{ webpage.title || 'Loading...' }}
               </div>
 
-              <div class="text-sm break-all opacity-70 mt-1" :title="webpage.url">
+              <div
+                class="text-sm break-all opacity-70 mt-1"
+                :title="webpage.url"
+              >
                 <span
                   :class="
                     webpage.url && webpage.url !== webpage.input
@@ -100,7 +121,10 @@
                 </span>
               </div>
               <div class="flex items-center gap-2 mt-2">
-                <span v-if="webpage.status" :class="getHttpStatusClass(webpage.status)">
+                <span
+                  v-if="webpage.status"
+                  :class="getHttpStatusClass(webpage.status)"
+                >
                   {{ webpage.status }}
                 </span>
                 <span v-if="webpage.status" class="text-sm opacity-30">|</span>
@@ -112,16 +136,28 @@
                   >Res: {{ webpage.responses?.length || 0 }}</span
                 >
               </div>
-              <div v-if="webpage.remoteAddress?.ip" class="text-sm opacity-70 font-mono mt-1">
+              <div
+                v-if="webpage.remoteAddress?.ip"
+                class="text-sm opacity-70 font-mono mt-1"
+              >
                 IP: {{ webpage.remoteAddress.ip }}
-                <span v-if="webpage.remoteAddress?.geoip?.[0]?.country" class="opacity-60 ml-1">
+                <span
+                  v-if="webpage.remoteAddress?.geoip?.[0]?.country"
+                  class="opacity-60 ml-1"
+                >
                   ({{ webpage.remoteAddress.geoip[0].country }})
                 </span>
               </div>
-              <div v-if="webpage.securityDetails?.subjectName" class="text-sm opacity-50 mt-1">
+              <div
+                v-if="webpage.securityDetails?.subjectName"
+                class="text-sm opacity-50 mt-1"
+              >
                 SSL: {{ webpage.securityDetails.subjectName }}
               </div>
-              <div v-if="webpage.wappalyzer?.length" class="flex flex-wrap gap-1 mt-2">
+              <div
+                v-if="webpage.wappalyzer?.length"
+                class="flex flex-wrap gap-1 mt-2"
+              >
                 <span
                   v-for="tech in webpage.wappalyzer"
                   :key="tech"
@@ -144,7 +180,10 @@
                     alt="Thumbnail"
                   />
                 </div>
-                <div v-else-if="getStatusText(webpage) === 'processing'" class="opacity-30 mb-1">
+                <div
+                  v-else-if="getStatusText(webpage) === 'processing'"
+                  class="opacity-30 mb-1"
+                >
                   <span class="loading loading-dots loading-sm"></span>
                 </div>
                 <span
@@ -163,7 +202,11 @@
     </div>
 
     <!-- Screenshot Modal -->
-    <ScreenshotModal :visible="showModal" :screenshot-id="modalScreenshotId" @close="closeModal" />
+    <ScreenshotModal
+      :visible="showModal"
+      :screenshot-id="modalScreenshotId"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -184,7 +227,8 @@ const autoRefreshing = ref(true);
 let intervalId: number | undefined;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-const { createdWebpageIds, getWebpageIds, addWebpageId, clearWebpageIds } = useWebpageStore();
+const { createdWebpageIds, getWebpageIds, addWebpageId, clearWebpageIds } =
+  useWebpageStore();
 
 const fetchWebpages = async () => {
   try {
@@ -198,11 +242,14 @@ const fetchWebpages = async () => {
       const idsQuery = createdWebpageIds.value.join(',');
       console.log('Making API call with IDs:', idsQuery);
       // 手動でクエリパラメータを構築
-      response = await fetch(`/api/webpages?ids=${encodeURIComponent(idsQuery)}`, {
-        headers: {
-          'Content-Type': 'application/json',
+      response = await fetch(
+        `/api/webpages?ids=${encodeURIComponent(idsQuery)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      }).then((res) => res.json());
+      ).then((res) => res.json());
     } else {
       // No webpages created yet
       console.log('No webpage IDs, returning empty result');
@@ -214,7 +261,11 @@ const fetchWebpages = async () => {
 
     // Check if all webpages are completed
     const allCompleted = webpages.value.every(
-      (webpage) => webpage.thumbnail || webpage.title || webpage.status >= 400 || webpage.error,
+      (webpage) =>
+        webpage.thumbnail ||
+        webpage.title ||
+        webpage.status >= 400 ||
+        webpage.error,
     );
     autoRefreshing.value = !allCompleted;
 
@@ -275,7 +326,9 @@ const showFullScreenshot = (webpage: any) => {
   // screenshots 配列の最初の要素の _id を使用する
   const screenshotId =
     webpage.screenshot ||
-    (webpage.screenshots && webpage.screenshots.length > 0 ? webpage.screenshots[0]._id : null);
+    (webpage.screenshots && webpage.screenshots.length > 0
+      ? webpage.screenshots[0]._id
+      : null);
 
   console.log('[Tasks] Extracted screenshotId:', screenshotId);
   modalScreenshotId.value = screenshotId;
@@ -328,18 +381,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 .modal-box {
   max-height: 90vh;
 }

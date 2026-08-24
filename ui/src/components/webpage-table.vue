@@ -15,26 +15,17 @@
               <div class="flex items-baseline gap-2 flex-wrap">
                 <router-link
                   :to="`/webpages/${webpage._id}`"
-                  class="link link-primary text-sm font-mono"
+                  class="link link-primary text-sm"
                   >ID: {{ webpage._id }}</router-link
                 >
-                <div class="text-sm opacity-60">
+                <div class="text-sm opacity-70">
                   {{ getRelativeTime(webpage.createdAt) }}
                   <span class="opacity-50 ml-1"
                     >({{ formatDate(webpage.createdAt) }})</span
                   >
-                  <span v-if="webpage.relatedDate" class="opacity-70 ml-1">
-                    / Rel: {{ getRelativeTime(webpage.relatedDate) }}
-                    <span class="opacity-50 ml-1"
-                      >({{ formatDate(webpage.relatedDate) }})</span
-                    >
-                  </span>
                 </div>
               </div>
-              <div
-                class="text-sm break-all opacity-80 mt-1"
-                :title="webpage.input"
-              >
+              <div class="text-base break-all mt-1" :title="webpage.input">
                 {{ displayUrl(webpage.input) }}
               </div>
               <div
@@ -46,12 +37,12 @@
                     <template v-for="(value, key) in webpage.option" :key="key">
                       <tr v-if="value" class="border-none">
                         <td
-                          class="py-0.5 px-2 font-bold opacity-50 text-sm w-32 align-top uppercase border-none"
+                          class="py-0.5 px-2 opacity-50 text-sm w-32 align-top uppercase border-none"
                         >
                           {{ key }}:
                         </td>
                         <td
-                          class="py-0.5 px-2 text-sm break-all font-mono border-none leading-tight"
+                          class="py-0.5 px-2 text-sm break-all border-none leading-tight"
                         >
                           {{ value }}
                         </td>
@@ -69,16 +60,16 @@
             >
               {{ webpage.error }}
             </div>
-            <div class="text-base font-bold truncate max-w-md">
+            <div class="text-base truncate max-w-md">
               {{ webpage.title || 'N/A' }}
             </div>
             <div class="flex flex-col gap-0.5 mb-2 mt-1">
               <div
-                class="text-sm break-all"
+                class="text-base break-all"
                 :class="
                   webpage.url && webpage.url !== webpage.input
-                    ? 'text-warning font-semibold opacity-100'
-                    : 'opacity-70'
+                    ? 'text-warning opacity-100'
+                    : 'opacity-100'
                 "
                 :title="webpage.url"
               >
@@ -87,7 +78,7 @@
             </div>
             <div class="flex items-center gap-2 mt-1">
               <span :class="getStatusClass(webpage.status)">{{
-                webpage.status || '???'
+                webpage.status || 'N/A'
               }}</span>
               <span class="text-sm opacity-50">|</span>
               <span class="text-sm text-primary font-medium"
@@ -103,19 +94,16 @@
                 }}</span
               >
             </div>
-            <div
-              v-if="webpage.remoteAddress?.ip"
-              class="text-sm opacity-70 font-mono mt-1"
-            >
+            <div v-if="webpage.remoteAddress?.ip" class="text-base mt-1">
               IP: {{ webpage.remoteAddress.ip }}
               <span
                 v-if="webpage.remoteAddress.geoip?.[0]?.country"
-                class="opacity-60"
+                class="opacity-70"
               >
                 ({{ webpage.remoteAddress.geoip[0].country }})
               </span>
             </div>
-            <div v-if="webpage.securityDetails" class="text-sm opacity-60 mt-1">
+            <div v-if="webpage.securityDetails" class="text-sm opacity-70 mt-1">
               🔒 {{ webpage.securityDetails.issuer }} ({{
                 getRelativeTime(webpage.securityDetails.validFrom)
               }})
@@ -177,16 +165,3 @@ const getStatusClass = (status: number) => {
 
 const getThumbnailUrl = (thumbnail: string) => formatImageUrl(thumbnail);
 </script>
-
-<style scoped>
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-</style>

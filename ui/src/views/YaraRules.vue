@@ -1,6 +1,6 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">YARA Rules</h1>
+    <h1 class="text-3xl font-bold mb-4">YARA Rules</h1>
 
     <div class="card bg-base-100 shadow-sm card-bordered mb-4">
       <div class="card-body">
@@ -152,7 +152,7 @@ press&gt;#input&gt;Enter"
         <tbody>
           <tr v-for="rule in yaraRules" :key="rule._id">
             <td class="col-date">
-              <div class="text-sm opacity-60 mb-2">
+              <div class="text-sm mb-2">
                 {{ formatDate(rule.createdAt) }}
               </div>
               <template v-if="editingRule?._id === rule._id">
@@ -552,21 +552,6 @@ onMounted(() => {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td,
-.textarea,
-.input {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td,
-[data-theme='dark'] .textarea,
-[data-theme='dark'] .input {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .col-date {

@@ -1,59 +1,59 @@
 <template>
   <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Responses</h1>
-
-    <!-- Filter Message -->
-    <div v-if="filterMessage" class="alert alert-info mb-4 text-sm">
-      {{ filterMessage }}
-    </div>
-
     <!-- Fixed Navigation -->
     <FixedNav />
 
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <h1 class="text-3xl font-bold mb-2">Responses</h1>
+
+    <!-- Filter Message -->
+    <div v-if="filterMessage" class="alert alert-info mb-2 text-sm">
+      {{ filterMessage }}
+    </div>
+
+    <div class="card">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">URL Regex</span></label
+              ><span class="label-text text-sm">URL</span></label
             >
             <input
               v-model="urlRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter URL..."
+              placeholder="Filter URL regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">Text Regex</span></label
+              ><span class="label-text text-sm">Text</span></label
             >
             <input
               v-model="textRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter content..."
+              placeholder="Filter content regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">IP Regex</span></label
+              ><span class="label-text text-sm">IP</span></label
             >
             <input
               v-model="ipRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter IP..."
+              placeholder="Filter IP regex  ..."
               class="input input-bordered input-sm w-50"
             />
           </div>
           <div class="form-control">
             <label class="label p-1"
-              ><span class="label-text text-sm">YARA Regex</span></label
+              ><span class="label-text text-sm">YARA</span></label
             >
             <input
               v-model="yaraRegex"
               @keyup.enter="handleSearch"
-              placeholder="Filter YARA..."
+              placeholder="Filter YARA regex..."
               class="input input-bordered input-sm w-50"
             />
           </div>
@@ -105,7 +105,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+    <div class="overflow-x-auto">
       <div
         class="flex items-center justify-between p-2 mb-2 gap-2"
         v-if="data.docs.length > 0"
@@ -142,7 +142,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-          <label>Per page:</label>
+          <label class="whitespace-nowrap">Per page:</label>
           <select
             v-model="limit"
             @change="changeLimit(limit)"
@@ -154,40 +154,40 @@
           </select>
         </div>
       </div>
-      <table class="table table-zebra w-full">
-        <thead>
+      <table class="table w-full">
+        <thead class="bg-base-300">
           <tr>
-            <th class="w-1/5">Created</th>
-            <th class="w-2/5">Response</th>
-            <th class="w-2/5">Related</th>
+            <th class="w-2/7">Created</th>
+            <th class="w-3/7">Response</th>
+            <th class="w-2/7">Related</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="response in data.docs" :key="response._id" class="hover">
-            <td class="text-sm text-base-content/60">
+            <td class="text-base">
               {{ formatDate(response.createdAt) }}
             </td>
             <td>
               <div class="flex flex-col gap-1">
                 <router-link
                   :to="`/responses/${response._id}`"
-                  class="link link-primary text-sm font-mono"
+                  class="link link-primary text-base"
                   >{{ response._id }}</router-link
                 >
                 <div
-                  class="text-sm font-medium break-all"
+                  class="text-base font-medium break-all"
                   :title="response.url"
                 >
                   {{ displayUrl(response.url) }}
                 </div>
-                <div class="flex items-center gap-2 text-sm">
+                <div class="flex items-center gap-2 text-base">
                   <span :class="getStatusClass(response.status)">
                     {{ response.status }} {{ response.statusText }}
                   </span>
                   <span class="opacity-50">|</span>
                   <span>{{ response.text?.length || 0 }} bytes</span>
                   <span class="opacity-50">|</span>
-                  <span class="opacity-70 font-mono">
+                  <span>
                     {{ response.remoteAddress?.ip || '-' }}
                     <span v-if="response.remoteAddress?.geoip?.length">
                       ({{ response.remoteAddress.geoip[0]?.country || '' }})
@@ -212,13 +212,10 @@
               <div class="flex flex-col gap-1" v-if="response.webpage">
                 <router-link
                   :to="`/webpages/${response.webpage._id}`"
-                  class="link link-secondary text-sm font-mono"
+                  class="link link-secondary text-base"
                   >{{ response.webpage._id }}</router-link
                 >
-                <div
-                  class="text-sm opacity-70 break-all"
-                  :title="response.webpage.url"
-                >
+                <div class="break-all text-base" :title="response.webpage.url">
                   {{ displayUrl(response.webpage.url) }}
                 </div>
                 <router-link
@@ -452,18 +449,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-  white-space: normal;
-  word-break: break-all;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

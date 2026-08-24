@@ -1,32 +1,41 @@
 <template>
-  <div class="container mx-auto max-w-[1280px] p-4">
-    <h1 class="text-3xl font-bold mb-6">Payloads</h1>
-
+  <div class="container mx-auto max-w-[1280px] p-2">
     <!-- Fixed Navigation -->
     <FixedNav />
 
     <!-- Search Filter -->
-    <div class="card bg-base-100 shadow-sm card-bordered mb-8">
+    <div class="card">
       <div class="card-body p-4">
         <div class="flex flex-wrap gap-4 items-end">
+          <h1 class="text-3xl font-bold">Payloads</h1>
           <input
             v-model="searchQuery"
             @keyup.enter="handleSearch"
             placeholder="Search by MD5 or YARA rule name..."
             class="input input-bordered input-sm flex-1"
           />
-          <button @click="handleSearch" class="btn btn-primary btn-sm">Search</button>
-          <button @click="clearSearch" v-if="searchQuery" class="btn btn-ghost btn-sm">
+          <button @click="handleSearch" class="btn btn-primary btn-sm">
+            Search
+          </button>
+          <button
+            @click="clearSearch"
+            v-if="searchQuery"
+            class="btn btn-ghost btn-sm"
+          >
             Clear
           </button>
         </div>
       </div>
     </div>
 
-    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
-      <div class="flex items-center justify-between p-2 mb-2 gap-2" v-if="data.docs.length > 0">
+    <div class="overflow-x-auto">
+      <div
+        class="flex items-center justify-between p-2 mb-2 gap-2"
+        v-if="data.docs.length > 0"
+      >
         <div class="text-base-content/70 text-sm">
-          Total: {{ data.totalDocs }} payloads | Page {{ data.page }} of {{ data.totalPages }}
+          Total: {{ data.totalDocs }} payloads | Page {{ data.page }} of
+          {{ data.totalPages }}
         </div>
         <div class="join">
           <button
@@ -40,7 +49,10 @@
             v-for="page in displayedPages"
             :key="page"
             @click="goToPage(page)"
-            :class="['join-item btn btn-sm', page === currentPage ? 'btn-primary' : '']"
+            :class="[
+              'join-item btn btn-sm',
+              page === currentPage ? 'btn-primary' : '',
+            ]"
           >
             {{ page }}
           </button>
@@ -77,7 +89,7 @@
         </thead>
         <tbody>
           <tr v-for="payload in data.docs" :key="payload._id" class="hover">
-            <td class="text-base-content/70">
+            <td>
               {{ formatDate(payload.createdAt) }}
             </td>
             <td>
@@ -94,7 +106,11 @@
             </td>
             <td>
               <div
-                v-if="payload.yara && payload.yara.rules && payload.yara.rules.length > 0"
+                v-if="
+                  payload.yara &&
+                  payload.yara.rules &&
+                  payload.yara.rules.length > 0
+                "
                 class="flex flex-wrap gap-1.5"
               >
                 <span
@@ -105,13 +121,20 @@
                   {{ rule.id }}
                 </span>
               </div>
-              <span v-else class="text-base-content/30 italic text-sm">N/A</span>
+              <span v-else class="text-base-content/30 italic text-sm"
+                >N/A</span
+              >
             </td>
             <td>
-              <span v-if="payload.tag && payload.tag.length > 0" class="badge badge-ghost badge-sm">
+              <span
+                v-if="payload.tag && payload.tag.length > 0"
+                class="badge badge-ghost badge-sm"
+              >
                 {{ payload.tag.length }} tags
               </span>
-              <span v-else class="text-base-content/30 italic text-sm">N/A</span>
+              <span v-else class="text-base-content/30 italic text-sm"
+                >N/A</span
+              >
             </td>
           </tr>
         </tbody>
@@ -126,7 +149,11 @@ import FixedNav from '../components/fixed-nav.vue';
 import { formatDate } from '../utils/date-utils';
 import { scrollToSection } from '../utils/scroll-utils';
 import { formatBytes } from '../utils/format-utils';
-import { getDisplayedPages, handlePageChange, handleLimitChange } from '../utils/pagination-utils';
+import {
+  getDisplayedPages,
+  handlePageChange,
+  handleLimitChange,
+} from '../utils/pagination-utils';
 
 export default {
   name: 'Payloads',
@@ -229,16 +256,5 @@ export default {
   scrollbar-gutter: stable;
   overflow-y: auto;
   min-height: 100vh;
-}
-
-/* テーブル全体の枠線とヘッダーのカスタマイズ */
-.table th,
-.table td {
-  border: 1px solid #eee;
-}
-
-[data-theme='dark'] .table th,
-[data-theme='dark'] .table td {
-  border-color: rgba(255, 255, 255, 0.5);
 }
 </style>

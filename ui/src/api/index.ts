@@ -148,6 +148,10 @@ export const webpageApi = {
       yaraRuleId,
     }),
   getWebpage: (id: string) => api.get(`/webpages/${id}`),
+  getWebpageRequestsResponses: (id: string) =>
+    api.get<{ requests: any[]; responses: any[] }>(
+      `/webpages/${id}/requests-responses`,
+    ),
   getHarFile: (id: string) => api.get(`/webpages/${id}/harfile`),
 };
 

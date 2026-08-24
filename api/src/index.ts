@@ -17,7 +17,7 @@ import requestRoutes from './routes/requests';
 import payloadRoutes from './routes/payloads';
 import removeRoutes from './routes/remove';
 import screenshotRoutes from './routes/screenshots';
-import yaraRoutes from './routes/yaras';
+import yaraRoutes, { syncYaraRulesToS3 } from './routes/yaras';
 import aiExplainRoutes from './routes/gemini';
 import userAgentsRoutes from './routes/userAgents';
 import ResultListener from './services/result-listener';
@@ -73,6 +73,8 @@ async function startServer() {
       await initializeAndEmptyBucket();
       console.log('S3 initialization completed successfully');
     }
+
+    await syncYaraRulesToS3();
 
     // Wait for 'open' event to ensure connection is fully ready
     if (mongoose.connection.readyState !== 1) {

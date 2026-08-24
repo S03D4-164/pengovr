@@ -411,4 +411,9 @@ pre {
   border-color: #ffffff !important;
   color: #ffffff !important;
 }
+[data-theme='light'] .btn-outline.btn-active {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  border-color: #000000 !important;
+  color: #000000 !important;
+}
 </style>

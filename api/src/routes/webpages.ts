@@ -155,12 +155,15 @@ router.get('/:id', async (req, res) => {
   );
 
   try {
+    // requests と responses のpopulateを削除し、IDのみを返す（遅延ロード）
     const webpage = await WebpageModel.findById(req.params.id)
-      .populate('requests')
-      .populate('responses')
       .populate('screenshot')
       .populate('screenshots.full')
-      .populate('payloads');
+      .populate('payloads')
+      .select({
+        requests: 0, // requests は省略（大量データなため）
+        responses: 0, // responses は省略（大量データなため）
+      });
 
     const responseTime = Date.now() - startTime;
 
@@ -172,7 +175,7 @@ router.get('/:id', async (req, res) => {
     }
 
     console.log(
-      `[${timestamp}] WEBPAGE_DETAIL_SUCCESS - IP: ${clientIP}, ID: ${req.params.id}, ResponseTime: ${responseTime}ms, HasRequests: ${webpage.requests?.length || 0}, HasResponses: ${webpage.responses?.length || 0}`,
+      `[${timestamp}] WEBPAGE_DETAIL_SUCCESS - IP: ${clientIP}, ID: ${req.params.id}, ResponseTime: ${responseTime}ms`,
     );
     res.json(webpage);
   } catch (error) {
@@ -223,6 +226,43 @@ router.get('/:id/harfile', async (req, res) => {
     res
       .status(500)
       .json({ error: 'Failed to download HAR file', details: error.message });
+  }
+});
+
+// Get webpage requests and responses separately (for performance)
+router.get('/:id/requests-responses', async (req, res) => {
+  const startTime = Date.now();
+  const timestamp = new Date().toISOString();
+
+  try {
+    const webpage = await WebpageModel.findById(req.params.id)
+      .select('requests responses')
+      .populate('requests')
+      .populate('responses');
+
+    const responseTime = Date.now() - startTime;
+
+    if (!webpage) {
+      return res.status(404).json({ error: 'Webpage not found' });
+    }
+
+    console.log(
+      `[${timestamp}] WEBPAGE_REQ_RES_SUCCESS - ID: ${req.params.id}, ResponseTime: ${responseTime}ms`,
+    );
+
+    res.json({
+      requests: webpage.requests || [],
+      responses: webpage.responses || [],
+    });
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    console.error(
+      `[${timestamp}] WEBPAGE_REQ_RES_ERROR - ID: ${req.params.id}, ResponseTime: ${responseTime}ms, Error: ${error.message}`,
+    );
+    res.status(500).json({
+      error: 'Failed to fetch requests and responses',
+      details: error.message,
+    });
   }
 });
 

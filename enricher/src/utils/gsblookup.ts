@@ -40,7 +40,7 @@ async function gsbLookup(url: string): Promise<GSBResponse> {
     if (err.cause) {
       console.error('Error cause:', err.cause);
     }
-    return { error: err.message || 'fetch failed' };
+    return { error: err.message || 'GSB failed' };
   }
 }
 
