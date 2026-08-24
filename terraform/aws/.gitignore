@@ -1,0 +1,28 @@
+# Terraform ローカルファイル
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+
+# 秘密鍵ファイル
+*.pem
+*.key
+*.openssh
+
+# エディタ
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+
+# IDE
+.idea/
+*.iml
+
+# 環境別変数ファイル
+terraform.dev.tfvars
+terraform.staging.tfvars
+terraform.prod.tfvars

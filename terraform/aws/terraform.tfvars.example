@@ -1,0 +1,24 @@
+# Terraform 変数ファイルのテンプレート
+# 本ファイルをコピーして terraform.tfvars を作成し、値を設定してください
+# 
+# 使用方法:
+#   cp terraform.tfvars.example terraform.tfvars
+#   vi terraform.tfvars
+
+# AWS リージョン
+aws_region = "us-east-1"
+
+# 環境名 (dev, staging, prod)
+environment = "dev"
+
+# S3 バケット名（グローバルで一意である必要があります）
+# 例: "pengovr-storage-dev-{your-company}-{date}"
+bucket_name = "pengovr-storage-dev"
+
+# S3 オブジェクト自動削除までの日数
+object_expiration_days = 1
+
+# SSH アクセスを許可する IP アドレス
+# 例: "203.0.113.45" または "203.0.113.0/24"
+# 空の場合は SSH ルールが作成されません
+my_ip = ""

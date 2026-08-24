@@ -1,0 +1,18 @@
+# Terraform ローカルファイル
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+
+# エディタ
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+
+# IDE
+.idea/
+*.iml
