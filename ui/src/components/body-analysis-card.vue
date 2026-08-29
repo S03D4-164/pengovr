@@ -120,17 +120,29 @@
 
     <!-- Live YARA Results -->
     <div v-if="yaraResults?.length" class="p-3 bg-base-200 rounded">
-      <h4 class="text-sm font-bold opacity-50 uppercase mb-2">
+      <h4 class="text-sm font-bold opacity-50 uppercase mb-3">
         Live YARA Matches
       </h4>
-      <div class="flex flex-wrap gap-2">
-        <span
+      <div class="space-y-3">
+        <div
           v-for="match in yaraResults"
           :key="match.id"
-          class="badge badge-accent badge-md font-bold"
+          class="rounded bg-base-100 p-3 border border-base-300"
         >
-          {{ match.id }}
-        </span>
+          <div class="mb-2">
+            <span class="badge badge-accent font-bold">{{ match.id }}</span>
+          </div>
+          <div v-if="match.matchedStrings?.length" class="text-sm space-y-1">
+            <div
+              v-for="(str, idx) in match.matchedStrings"
+              :key="idx"
+              class="pl-2 border-l-2 border-accent/30 text-base-content/80 font-mono text-xs break-all"
+            >
+              {{ str.length > 60 ? str.substring(0, 60) + '...' : str }}
+            </div>
+          </div>
+          <div v-else class="text-xs opacity-50 italic">No matched strings</div>
+        </div>
       </div>
     </div>
     <div v-if="yaraError" class="alert alert-error text-sm p-2 rounded">
@@ -164,6 +176,7 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers.css';
 import InfoCard from './info-card.vue';
 import InfoTable from './info-table.vue';
 import { scanContent } from '../utils/yara-utils';
+import Mark from 'mark.js';
 
 export default {
   name: 'BodyAnalysisCard',
@@ -272,10 +285,55 @@ export default {
       try {
         this.isScanning = true;
         this.yaraResults = await scanContent(this.content);
+        console.log(this.yaraResults);
+
+        // ハイライト処理
+        if (this.yaraResults && this.yaraResults.length > 0) {
+          this.$nextTick(() => {
+            this.highlightYaraMatches();
+          });
+        }
       } catch (e) {
         this.yaraError = e.message;
       } finally {
         this.isScanning = false;
+      }
+    },
+    highlightYaraMatches() {
+      const codeEl = this.$refs.codeBlock;
+      if (!codeEl) return;
+
+      // mark.js インスタンスを作成
+      const instance = new Mark(codeEl);
+
+      // 既に存在するハイライトをクリア
+      instance.unmark();
+
+      // 各マッチの文字列をハイライト
+      if (this.yaraResults && this.yaraResults.length > 0) {
+        this.yaraResults.forEach((result, index) => {
+          if (result.matchedStrings && result.matchedStrings.length > 0) {
+            // 各マッチされた文字列に対して異なる色を割り当て
+            const colors = [
+              'bg-red-300',
+              'bg-yellow-300',
+              'bg-green-300',
+              'bg-blue-300',
+              'bg-purple-300',
+              'bg-pink-300',
+              'bg-cyan-300',
+              'bg-orange-300',
+            ];
+            const colorClass = colors[index % colors.length];
+
+            result.matchedStrings.forEach((matchedStr) => {
+              instance.mark(matchedStr, {
+                className: `mark-yara ${colorClass}`,
+                separateWordSearch: false,
+              });
+            });
+          }
+        });
       }
     },
     async aiExplain(api) {
@@ -415,5 +473,52 @@ pre {
   background-color: rgba(0, 0, 0, 0.1) !important;
   border-color: #000000 !important;
   color: #000000 !important;
+}
+
+/* YARA ハイライトスタイル */
+:deep(.mark-yara) {
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+:deep(.mark-yara.bg-red-300) {
+  background-color: rgba(239, 68, 68, 0.5);
+  color: #fff;
+}
+
+:deep(.mark-yara.bg-yellow-300) {
+  background-color: rgba(234, 179, 8, 0.5);
+  color: #000;
+}
+
+:deep(.mark-yara.bg-green-300) {
+  background-color: rgba(34, 197, 94, 0.5);
+  color: #fff;
+}
+
+:deep(.mark-yara.bg-blue-300) {
+  background-color: rgba(59, 130, 246, 0.5);
+  color: #fff;
+}
+
+:deep(.mark-yara.bg-purple-300) {
+  background-color: rgba(147, 51, 234, 0.5);
+  color: #fff;
+}
+
+:deep(.mark-yara.bg-pink-300) {
+  background-color: rgba(236, 72, 153, 0.5);
+  color: #fff;
+}
+
+:deep(.mark-yara.bg-cyan-300) {
+  background-color: rgba(34, 211, 238, 0.5);
+  color: #000;
+}
+
+:deep(.mark-yara.bg-orange-300) {
+  background-color: rgba(249, 115, 22, 0.5);
+  color: #fff;
 }
 </style>

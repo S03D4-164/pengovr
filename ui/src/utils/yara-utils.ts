@@ -59,6 +59,32 @@ export const validateRule = async (ruleString: string) => {
 };
 
 /**
+ * Extract all matched strings from all patterns in a match.
+ * @param content - Original content that was scanned
+ * @param patterns - Pattern objects with matches
+ * @returns Array of all extracted strings from all patterns
+ */
+export const extractAllMatchedStrings = (
+  content: string | Uint8Array,
+  patterns: Array<{ matches: Array<{ offset: number; length: number }> }>,
+): string[] => {
+  const contentStr =
+    typeof content === 'string' ? content : new TextDecoder().decode(content);
+
+  const allMatches: string[] = [];
+
+  patterns.forEach((pattern) => {
+    pattern.matches.forEach((match) => {
+      allMatches.push(
+        contentStr.substring(match.offset, match.offset + match.length),
+      );
+    });
+  });
+
+  return allMatches;
+};
+
+/**
  * Scan content with YARA rules.
  */
 export const scanContent = async (content: string | Uint8Array) => {
@@ -69,7 +95,7 @@ export const scanContent = async (content: string | Uint8Array) => {
       // Fetch active rules from API (limit 1000 for scanning)
       const rulesData = await yaraApi.getYaraRules(1, 1000);
       const ruleStrings = rulesData.results.map((r: any) => r.rule).join('\n');
-      console.log(ruleStrings);
+      //console.log(ruleStrings);
       if (ruleStrings.trim()) {
         const compiler = new module.Compiler();
         compiler.addSource(ruleStrings);
@@ -82,11 +108,21 @@ export const scanContent = async (content: string | Uint8Array) => {
         const scanResult = compiledRules.scan(bytes);
 
         if (scanResult.valid) {
-          return scanResult.matches.map((m: any) => ({
-            id: m.identifier,
-            tags: m.tags || [],
-            meta: m.meta || {},
-          }));
+          //console.log(scanResult.matches);
+          return scanResult.matches.map((m: any) => {
+            // 各パターンの全マッチ文字列を抽出
+            const allMatchedStrings = extractAllMatchedStrings(
+              content,
+              m.patterns || [],
+            );
+
+            return {
+              id: m.identifier,
+              tags: m.tags || [],
+              meta: m.meta || {},
+              matchedStrings: allMatchedStrings,
+            };
+          });
         }
       }
     }
