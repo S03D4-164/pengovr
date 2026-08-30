@@ -78,3 +78,39 @@ output "ec2_private_key_path" {
   value       = local_sensitive_file.private_key.filename
   sensitive   = false
 }
+
+# ECR リポジトリ URI
+output "ecr_repository_uri" {
+  description = "Worker 用 ECR リポジトリ URI"
+  value       = aws_ecr_repository.worker.repository_url
+}
+
+# ECR リポジトリ名
+output "ecr_repository_name" {
+  description = "Worker 用 ECR リポジトリ名"
+  value       = aws_ecr_repository.worker.name
+}
+
+# ECS クラスター名
+output "ecs_cluster_name" {
+  description = "ECS クラスター名"
+  value       = aws_ecs_cluster.main.name
+}
+
+# ECS サービス名
+output "ecs_service_name" {
+  description = "ECS サービス名"
+  value       = aws_ecs_service.worker.name
+}
+
+# ECS タスク定義 ARN
+output "ecs_task_definition_arn" {
+  description = "ECS タスク定義の ARN"
+  value       = aws_ecs_task_definition.worker.arn
+}
+
+# ECS タスク定義ファミリー
+output "ecs_task_definition_family" {
+  description = "ECS タスク定義ファミリー名"
+  value       = aws_ecs_task_definition.worker.family
+}
