@@ -196,7 +196,7 @@ resource "aws_cloudwatch_metric_alarm" "queue_length_high" {
   evaluation_periods  = 1
   metric_name         = "WaitingJobCount"
   namespace           = "BullMQ/Metrics"
-  period              = 30
+  period              = 60
   statistic           = "Average"
   threshold           = 1
   alarm_description   = "Trigger ECS scale out when queue has jobs"
@@ -213,10 +213,10 @@ resource "aws_cloudwatch_metric_alarm" "queue_length_high" {
 resource "aws_cloudwatch_metric_alarm" "queue_length_low" {
   alarm_name          = "pengovr-queue-length-low"
   comparison_operator = "LessThanThreshold"
-  evaluation_periods  = 5
+  evaluation_periods  = 3
   metric_name         = "WaitingJobCount"
   namespace           = "BullMQ/Metrics"
-  period              = 30
+  period              = 60
   statistic           = "Average"
   threshold           = 1
   alarm_description   = "Trigger ECS scale in when queue is empty"
@@ -276,7 +276,7 @@ resource "aws_appautoscaling_policy" "ecs_policy_scale_in" {
 
   step_scaling_policy_configuration {
     adjustment_type          = "ExactCapacity"
-    cooldown                 = 300
+    cooldown                 = 180
     metric_aggregation_type  = "Average"
 
     step_adjustment {
