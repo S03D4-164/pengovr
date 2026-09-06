@@ -216,7 +216,7 @@
     <FixedNav
       :targets="[
         { id: 'top', label: '↑', btnClass: 'btn-primary' },
-        { id: 'bottom', label: '↓', btnClass: 'btn-ghost' },
+        { id: 'bottom', label: '↓', btnClass: 'btn-secondary' },
       ]"
     />
 

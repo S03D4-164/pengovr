@@ -28,23 +28,27 @@ tasksRouter.post('/', async (req: any, res: any) => {
       });
       await website.save();
 
-      // GSBルックアップをキューに追加
-      const enrichmentQueue = req.app.locals.enrichmentQueue;
-      const gsbTaskId = uuidv4();
-      await enrichmentQueue.add(
-        'gsb_lookup',
-        {
-          id: gsbTaskId,
-          type: 'gsb_lookup',
-          websiteId: website._id.toString(),
-          url: taskUrl,
-          timestamp: new Date().toISOString(),
-        },
-        { jobId: gsbTaskId },
-      );
-      console.log(
-        `[${timestamp}] GSB lookup task queued for new website via Task route`,
-      );
+      // GSBルックアップをキューに追加（noenrichが設定されていない場合のみ）
+      if (!taskOptions?.noenrich) {
+        const enrichmentQueue = req.app.locals.enrichmentQueue;
+        const gsbTaskId = uuidv4();
+        await enrichmentQueue.add(
+          'gsb_lookup',
+          {
+            id: gsbTaskId,
+            type: 'gsb_lookup',
+            websiteId: website._id.toString(),
+            url: taskUrl,
+            timestamp: new Date().toISOString(),
+          },
+          { jobId: gsbTaskId },
+        );
+        console.log(
+          `[${timestamp}] GSB lookup task queued for new website via Task route`,
+        );
+      } else {
+        console.log(`[${timestamp}] GSB lookup skipped due to noenrich option`);
+      }
     }
     // ----------------------------------
 

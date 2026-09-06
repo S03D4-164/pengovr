@@ -1,18 +1,19 @@
 #!/bin/bash
 
-# Terraform で作成した ECR にイメージをビルド・プッシュするスクリプト
-# 使用方法: ./build-and-push.sh [AWS_REGION] [AWS_PROFILE]
-
 set -e
 
-# 変数
 AWS_REGION="${1:-us-east-1}"
 AWS_PROFILE="${2:-default}"
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AWS_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$AWS_DIR")")"
 DOCKERFILE_PATH="${PROJECT_ROOT}/wgeteer"
 
-# Terraform の出力から ECR リポジトリ URI を取得
-ECR_REPOSITORY_URI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && terraform output -raw ecr_repository_uri 2>/dev/null || echo "")
+# Terraform 出力を一度に取得
+cd "$AWS_DIR"
+ECR_REPOSITORY_URI=$(terraform output -raw ecr_repository_uri 2>/dev/null || echo "")
+CLUSTER_NAME=$(terraform output -raw ecs_cluster_name 2>/dev/null || echo "")
+SERVICE_NAME=$(terraform output -raw ecs_service_name 2>/dev/null || echo "")
 
 if [ -z "$ECR_REPOSITORY_URI" ]; then
   echo "❌ エラー: ECR リポジトリ URI を取得できません"
@@ -20,7 +21,6 @@ if [ -z "$ECR_REPOSITORY_URI" ]; then
   exit 1
 fi
 
-REPOSITORY_NAME="${ECR_REPOSITORY_URI##*/}"
 IMAGE_TAG="latest"
 IMAGE_URI="${ECR_REPOSITORY_URI}:${IMAGE_TAG}"
 
@@ -30,15 +30,11 @@ echo "  イメージタグ: ${IMAGE_TAG}"
 echo "  AWS リージョン: ${AWS_REGION}"
 echo ""
 
-# AWS CLI プロファイルを設定
-export AWS_PROFILE
-export AWS_DEFAULT_REGION="${AWS_REGION}"
+export AWS_PROFILE AWS_DEFAULT_REGION="${AWS_REGION}"
 
-# ECR ログイン
 echo "🔐 ECR ログイン中..."
 aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REPOSITORY_URI%%/*}"
 
-# Docker イメージをビルド
 echo "🏗️  Docker イメージをビルド中..."
 docker build \
   --network=host \
@@ -47,15 +43,10 @@ docker build \
   --tag "${ECR_REPOSITORY_URI}:$(date +%Y%m%d-%H%M%S)" \
   "${DOCKERFILE_PATH}"
 
-# Docker イメージを ECR にプッシュ
 echo "📤 Docker イメージを ECR にプッシュ中..."
 docker push "${IMAGE_URI}"
 
-# 新しいデプロイを強制
 echo "🚀 ECS サービスを更新中..."
-CLUSTER_NAME=$(cd "$(dirname "${BASH_SOURCE[0]}")" && terraform output -raw ecs_cluster_name 2>/dev/null || echo "")
-SERVICE_NAME=$(cd "$(dirname "${BASH_SOURCE[0]}")" && terraform output -raw ecs_service_name 2>/dev/null || echo "")
-
 if [ -n "$CLUSTER_NAME" ] && [ -n "$SERVICE_NAME" ]; then
   aws ecs update-service \
     --cluster "${CLUSTER_NAME}" \

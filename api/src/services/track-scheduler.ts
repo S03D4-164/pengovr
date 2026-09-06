@@ -68,6 +68,7 @@ export const initTrackScheduler = async (
           const webpage = new WebpageModel({
             _id: webpageId,
             input: site.url,
+            option: site.track.option,
           });
           await webpage.save();
 

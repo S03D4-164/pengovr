@@ -47,7 +47,7 @@
       :targets="[
         { id: 'top', label: '↑', btnClass: 'btn-primary' },
         { id: 'body-section', label: 'BODY', btnClass: 'btn-outline text-sm' },
-        { id: 'bottom', label: '↓', btnClass: 'btn-ghost' },
+        { id: 'bottom', label: '↓', btnClass: 'btn-secondary' },
       ]"
     />
   </div>

@@ -392,7 +392,7 @@
           { id: 'top', label: '↑', btnClass: 'btn-primary' },
           { id: 'requests', label: 'REQ', btnClass: 'btn-outline text-sm' },
           { id: 'contents', label: 'BODY', btnClass: 'btn-outline text-sm' },
-          { id: 'bottom', label: '↓', btnClass: 'btn-ghost' },
+          { id: 'bottom', label: '↓', btnClass: 'btn-secondary' },
         ]"
       />
     </div>
