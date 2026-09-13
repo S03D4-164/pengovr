@@ -1,0 +1,26 @@
+[project]
+name = "worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "bullmq>=3.2.1",
+    "invisible-playwright>=0.7.4",
+    "nodriver>=0.50.3",
+    "boto3>=1.26.0",
+    "botocore>=1.29.0",
+    "pillow>=10.0.0",
+]
+
+[tool.uv]
+exclude-newer = "1 week"
+
+system-certs = true
+
+keyring-provider = "subprocess"
+
+index-strategy = "first-index"
+
+[[tool.uv.index]]
+name = "official-pypi"
+url = "https://pypi.org/simple"
+default = true
