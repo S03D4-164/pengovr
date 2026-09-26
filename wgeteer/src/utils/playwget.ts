@@ -442,11 +442,27 @@ async function playwget(webpage: any): Promise<any> {
       screenshotsCollector,
     );
   } catch (err: any) {
-    logger.error(`[${pageId}] ${page.isClosed()} ${err}`);
-    if (page.isClosed()) {
-      return;
+    logger.error(`[${pageId}] Navigation error: ${err.message}`);
+    
+    // Handle timeout by stopping page loading via CDP
+    if (err.name === 'TimeoutError' || err.message.includes('Timeout')) {
+      try {
+        logger.debug(`[${pageId}] Halting page loading via CDP Page.stopLoading`);
+        // Use CDP to stop network requests at browser level
+        await client.send('Page.stopLoading').catch(() => {});
+        webpage.error = `Navigation timeout after ${webpage.option.timeout}s, stopped loading`;
+        logger.debug(`[${pageId}] Page stopped via CDP, continuing to capture data`);
+        // Continue processing to capture screenshot and partial content
+      } catch (stopErr) {
+        logger.error(`[${pageId}] Failed to stop page: ${stopErr}`);
+        throw err;
+      }
     } else {
-      webpage.error = err.message;
+      // Non-timeout errors should throw
+      if (!page.isClosed()) {
+        webpage.error = err.message;
+      }
+      throw err;
     }
   }
   logger.debug(`[${pageId}] goto completed ${webpage.input}`);

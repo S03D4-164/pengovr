@@ -1,9 +1,8 @@
 <template>
   <!-- URL Modal -->
-  <div v-if="showUrlModal" class="modal modal-open" @click="closeUrlModal">
+  <div v-if="showUrlModal" class="modal modal-open">
     <div
       class="modal-box max-w-4xl p-0 overflow-hidden border border-base-300"
-      @click.stop
     >
       <div
         class="flex items-center justify-between p-2 border-b border-base-200 bg-base-200/50"
