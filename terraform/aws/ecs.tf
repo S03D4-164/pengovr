@@ -182,7 +182,7 @@ resource "aws_ecs_service" "worker" {
 
 # オートスケーリング対象のリソース登録
 resource "aws_appautoscaling_target" "ecs_target" {
-  max_capacity       = 50
+  max_capacity       = 100
   min_capacity       = 0
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.worker.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -261,7 +261,13 @@ resource "aws_appautoscaling_policy" "ecs_policy_scale_out" {
 
     step_adjustment {
       metric_interval_lower_bound = 50
+      metric_interval_upper_bound = 100
       scaling_adjustment          = 50
+    }
+
+    step_adjustment {
+      metric_interval_lower_bound = 100
+      scaling_adjustment          = 100
     }
   }
 }
@@ -275,13 +281,13 @@ resource "aws_appautoscaling_policy" "ecs_policy_scale_in" {
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
 
   step_scaling_policy_configuration {
-    adjustment_type          = "ExactCapacity"
+    adjustment_type          = "ChangeInCapacity"
     cooldown                 = 180
     metric_aggregation_type  = "Average"
 
     step_adjustment {
       metric_interval_upper_bound = 0
-      scaling_adjustment          = 0
+      scaling_adjustment          = -100
     }
   }
 }
