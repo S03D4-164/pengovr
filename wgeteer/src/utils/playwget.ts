@@ -443,9 +443,7 @@ async function playwget(webpage: any): Promise<any> {
     );
   } catch (err: any) {
     logger.error(`[${pageId}] Navigation error: ${err.message}`);
-    
-    // Handle timeout by stopping page loading via CDP
-    if (err.name === 'TimeoutError' || err.message.includes('Timeout')) {
+        if (err.name === 'TimeoutError' || err.message.includes('Timeout')) {
       try {
         logger.debug(`[${pageId}] Halting page loading via CDP Page.stopLoading`);
         // Use CDP to stop network requests at browser level
@@ -455,14 +453,14 @@ async function playwget(webpage: any): Promise<any> {
         // Continue processing to capture screenshot and partial content
       } catch (stopErr) {
         logger.error(`[${pageId}] Failed to stop page: ${stopErr}`);
-        throw err;
+        //throw err;
       }
     } else {
       // Non-timeout errors should throw
       if (!page.isClosed()) {
         webpage.error = err.message;
       }
-      throw err;
+      //throw err;
     }
   }
   logger.debug(`[${pageId}] goto completed ${webpage.input}`);
