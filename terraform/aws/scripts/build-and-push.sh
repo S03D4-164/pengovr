@@ -38,9 +38,9 @@ aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AW
 echo "🏗️  Docker イメージをビルド中..."
 docker build \
   --network=host \
+  --provenance=false \
   --file "${DOCKERFILE_PATH}/Dockerfile.alpine" \
   --tag "${IMAGE_URI}" \
-  --tag "${ECR_REPOSITORY_URI}:$(date +%Y%m%d-%H%M%S)" \
   "${DOCKERFILE_PATH}"
 
 echo "📤 Docker イメージを ECR にプッシュ中..."
