@@ -5,6 +5,7 @@ import { protectIt } from './playwright-afp/index.js';
 
 import logger from './logger.js';
 import { saveRequest, saveResponse } from './playwgetIntercept.js';
+import { savePayload } from './payload.js';
 import {
   cdpScreenshot,
   imgResize,
@@ -77,7 +78,7 @@ async function genPage(
       userDataDir,
       options,
     );
-    const permissions = ['notifications'];
+    const permissions = ['notifications', 'clipboard-read', 'clipboard-write'];
     await browserContext.grantPermissions(permissions);
     //browserContext.setDefaultTimeout(30000);
     //const pages = browserContext.pages();
@@ -208,6 +209,18 @@ async function playwget(webpage: any): Promise<any> {
 
   // websocket
   await client.send('Network.enable');
+  
+  /*
+  // Unified Network.responseReceived handler
+  client.on('Network.responseReceived', async (params: any) => {
+    const { response, requestId } = params;
+    const url = response.url;
+    
+    // Log all responses for debugging
+    //logger.debug(`[${pageId}] Network.responseReceived: ${url.slice(0, 100)}`);
+  });
+  */
+
   client.on('Network.webSocketClosed', async (ws) => {
     console.log('closed', ws);
   });
@@ -244,16 +257,26 @@ async function playwget(webpage: any): Promise<any> {
   });
   client.on('Network.webSocketHandshakeResponseReceived', async (ws) => {
     //console.log('response', ws);
-    wsObj[ws.requestId]['response'] = ws.response;
-    await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+    if (wsObj[ws.requestId]) {
+      wsObj[ws.requestId]['response'] = ws.response;
+      await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+    }
   });
   client.on('Network.webSocketWillSendHandshakeRequest', async (ws) => {
     //console.log('request', ws);
-    wsObj[ws.requestId]['request'] = ws.request;
+    if (wsObj[ws.requestId]) {
+      wsObj[ws.requestId]['request'] = ws.request;
+    }
+  });
+  client.on('Network.webSocketClosed', async (ws) => {
+    if (wsObj[ws.requestId]) {
+      await wsObjToArray(wsObj[ws.requestId], ws.requestId);
+      delete wsObj[ws.requestId];
+    }
   });
 
   async function wsObjToArray(ws: any, interceptionId: String) {
-    console.log(ws);
+    //console.log(ws);
     try {
       const req = {
         webpage: pageId,
@@ -293,7 +316,8 @@ async function playwget(webpage: any): Promise<any> {
     async ({ requestId, request, responseStatusCode }: any) => {
       /*logger.debug(
         `[Intercepted] ${requestId}, ${responseStatusCode}, ${request.url}`,
-      );*/
+      );
+      */
       let cache: {
         url: string;
         status: number;
@@ -364,20 +388,18 @@ async function playwget(webpage: any): Promise<any> {
     if (!webpage.option?.pageonly) {
       try {
         /*
-      logger.debug(
-        `[Request] finished: ${request.method()} ${request.url().slice(0, 100)}`,
-      );
-      */
+        logger.debug(
+          `[Request] finished: ${request.method()} ${request.url().slice(0, 100)}`,
+        );
+        */      
         let req: any = await saveRequest(request, pageId);
         //console.log(req);
         const response = await request.response();
         let res;
-        if (response) {
-          /*
-        logger.debug(
-          `[Request] response: ${response.status()} ${response.url().slice(0, 100)}`,
-        );
-        */
+        if (response) {        
+          logger.debug(
+            `[Request] response: ${response.status()} ${response.url().slice(0, 100)}`,
+          );
           res = await saveResponse(
             response,
             pageId,
@@ -544,7 +566,7 @@ async function playwget(webpage: any): Promise<any> {
   for (let res of responseArray) {
     Object.entries(wsObj).forEach(([key, value]: any) => {
       if (res.interceptionId == key) {
-        console.log(key, value);
+        //console.log(key, value);
         res.text = JSON.stringify(value['messages'], null, 2);
       }
     });
@@ -559,16 +581,30 @@ async function playwget(webpage: any): Promise<any> {
   webpage.screenshots_data = screenshotsCollector;
 
   // Set remoteAddress and status from response that matches webpage URL
-  const matchingResponse = responseArray.find(
-    (res: any) => res.url === webpage.url,
-  );
+  // Compare URLs without hash fragments to match pages with different anchors
+  // Get the LAST matching response if multiple responses have the same URL
+  const pageUrlWithoutHash = webpage.url?.split('#')[0];
+  let matchingResponse: any = null;
+  
+  if (pageUrlWithoutHash) {
+    // Iterate in reverse order to find the last matching response
+    for (let i = responseArray.length - 1; i >= 0; i--) {
+      const res = responseArray[i];
+      const resUrlWithoutHash = res.url?.split('#')[0];
+      if (resUrlWithoutHash === pageUrlWithoutHash) {
+        matchingResponse = res;
+        break;
+      }
+    }
+  }
+  
   if (matchingResponse) {
     webpage.status = matchingResponse.status;
     webpage.remoteAddress = matchingResponse.remoteAddress;
     webpage.securityDetails = matchingResponse.securityDetails;
     webpage.headers = matchingResponse.headers;
     logger.info(
-      `[${pageId}] Set status (${webpage.status}) and metadata from matching response`,
+      `[${pageId}] Set status (${webpage.status}) and metadata from matching response (last occurrence)`,
     );
   }
 

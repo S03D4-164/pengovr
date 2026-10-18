@@ -51,7 +51,7 @@
                   :to="`/websites/${website._id}`"
                   class="link link-primary font-mono text-base"
                 >
-                  {{ displayUrl(website.url) }}
+                  {{website._id}}
                 </router-link>
               </td>
             </tr>
@@ -579,6 +579,9 @@ export default {
       immediate: true,
       handler(newVal) {
         if (newVal) {
+          // webpage が更新されたら fetchWebsite を呼び出す
+          this.fetchWebsite();
+          
           // スクロール復元をスキップして即表示
           this.isContentVisible = true;
 
@@ -694,18 +697,25 @@ export default {
     },
     async fetchWebsite() {
       try {
-        if (!this.webpage?.input) return;
+        if (!this.webpage?.input) {
+          console.log('No webpage.input available');
+          return;
+        }
         console.log('Fetching website for URL:', this.webpage.input);
+        
+        // Website を input URL で検索
         try {
+          // URLをBase64エンコード（websiteのキー形式に合わせる）
           const b64input = btoa(this.webpage.input)
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=+$/, '');
+          
+          console.log('Searching website with b64input:', b64input);
           this.website = await websiteApi.getWebsiteByUrl(b64input);
           console.log('Website data received:', this.website);
         } catch (e) {
-          console.log('No website found for this URL or error fetching', e);
-          this.website = null;
+          console.log('No website found via URL encoding, error:', e);
         }
       } catch (error) {
         console.error('Error fetching website:', error);

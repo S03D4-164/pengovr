@@ -166,7 +166,13 @@ export class ResultListener {
         if (requests.length > 0) {
           console.log(`Saving ${requests.length} requests to MongoDB...`);
           try {
-            await RequestModel.insertMany(requests, { ordered: false });
+            const savedRequests = await RequestModel.insertMany(requests, { ordered: false });
+            // requestsのIDをsavedRequestsのIDで上書き
+            for (let i = 0; i < requests.length; i++) {
+              if (savedRequests[i]) {
+                requests[i]._id = savedRequests[i]._id;
+              }
+            }
           } catch (err: any) {
             console.warn(
               `[ResultListener] Some requests failed to save for job ${jobId}:`,
@@ -178,7 +184,13 @@ export class ResultListener {
         if (responses.length > 0) {
           console.log(`Saving ${responses.length} responses to MongoDB...`);
           try {
-            await ResponseModel.insertMany(responses, { ordered: false });
+            const savedResponses = await ResponseModel.insertMany(responses, { ordered: false });
+            // responsesのIDをsavedResponsesのIDで上書き
+            for (let i = 0; i < responses.length; i++) {
+              if (savedResponses[i]) {
+                responses[i]._id = savedResponses[i]._id;
+              }
+            }
           } catch (err: any) {
             console.warn(
               `[ResultListener] Some responses failed to save for job ${jobId}:`,

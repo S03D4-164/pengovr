@@ -109,7 +109,16 @@ async function playwgetAction(
         if (last == 'last') loc = loc.last();
         else loc = loc.first();
         if (action == 'click' || action == 'clicktxt') {
-          await loc.click(options);
+          try {
+            await Promise.all([
+              page.waitForLoadState('load', { timeout: delay || 5000 }).catch(() => {}),
+              loc.click(options),
+            ]);
+          } catch (e: any) {
+            logger.debug(`[${pageId}] click action error (ignored): ${e.message}`);
+          }
+          // Wait for viewport to stabilize after potential navigation
+          await new Promise((done) => setTimeout(done, 500));
         } else if (action == 'fill') {
           await loc.fill(input, options);
         } else if (action == 'press') {
@@ -129,6 +138,9 @@ async function playwgetAction(
 
     const clipboardText = await page.evaluate(async () => {
       return navigator.clipboard ? await navigator.clipboard.readText() : '';
+    }).catch((e: any) => {
+      logger.debug(`[${pageId}] Clipboard read skipped: ${e.message}`);
+      return '';
     });
     console.log(clipboardText);
 
