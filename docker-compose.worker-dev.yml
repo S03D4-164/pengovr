@@ -24,6 +24,8 @@ services:
       dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
+        - NODE_IMAGE_SHA_DEBIAN_DEV=${NODE_IMAGE_SHA_DEBIAN_DEV}
+        - PNPM_VERSION=${PNPM_VERSION}
       cache_from:
         - wgeteer-dev:latest
     container_name: wgeteer-dev
@@ -102,6 +104,8 @@ services:
       dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
+        - NODE_IMAGE_SHA_DEBIAN_DEV=${NODE_IMAGE_SHA_DEBIAN_DEV}
+        - PNPM_VERSION=${PNPM_VERSION}
       cache_from:
         - enricher-dev:latest
     container_name: enricher-dev
@@ -123,7 +127,7 @@ services:
     tty: true
     init: true
     volumes:
-      - ./enricher/src:/app/enricher/src
+      - ./enricher/src:/app/enricher/src:cached
       - /app/node_modules
       - ./enricher/logs:/app/enricher/logs:Z
     working_dir: /app/enricher

@@ -1,10 +1,14 @@
-FROM node@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1
+ARG NODE_IMAGE_SHA_DEBIAN_DEV
+ARG PNPM_VERSION
 
+FROM node@sha256:${NODE_IMAGE_SHA_DEBIAN_DEV}
+
+ARG PNPM_VERSION
 ENV APP_HOME=/app/api
+ENV PNPM_VERSION=${PNPM_VERSION}
 WORKDIR $APP_HOME
 
-# pnpm 11 の直接インストール（root権限が必要）
-RUN npm install -g pnpm@11.5.2
+RUN npm cache clean --force && npm uninstall -g pnpm || true && npm install -g pnpm@${PNPM_VERSION} --allow-scripts=pnpm --force
 
 RUN chown -R node:node /app
 
@@ -22,7 +26,7 @@ COPY --chown=node:node ecosystem.config.cjs ./ecosystem.config.cjs
 
 # 依存関係をインストール
 RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
-    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store --ignore-scripts
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store --ignore-scripts --silent
 
 # ソースコードをコピー
 COPY --chown=node:node src ./src

@@ -5,7 +5,7 @@
   "main": "src/enrichment-worker.ts",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@11.5.2",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
