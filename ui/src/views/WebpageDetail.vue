@@ -150,6 +150,37 @@
             </tr>
           </InfoTable>
 
+          <!-- Favicon Hashes -->
+          <div
+            v-if="webpage.favicon?.length && Object.keys(faviconHashes).length"
+            class="mt-6 pt-4 border-t border-base-300"
+          >
+            <h3 class="text-sm font-bold opacity-50 uppercase mb-3">
+              Favicon Hashes
+            </h3>
+            <div class="space-y-3">
+              <div
+                v-for="(hashes, index) in faviconHashes"
+                :key="index"
+                class="bg-base-200/30 p-3 rounded border border-base-300"
+              >
+                <div class="text-xs font-bold opacity-60 mb-2">
+                  Favicon #{{ index }}
+                </div>
+                <div class="space-y-2">
+                  <div class="flex items-start gap-2">
+                    <span class="text-xs font-bold opacity-50 min-w-fit">MD5:</span>
+                    <code class="text-xs break-all font-mono">{{ hashes.md5 }}</code>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-xs font-bold opacity-50 min-w-fit">SHA256:</span>
+                    <code class="text-xs break-all font-mono">{{ hashes.sha256 }}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- HAR File Download -->
           <div
             v-if="webpage.harfile"
@@ -416,7 +447,7 @@ import { webpageApi, websiteApi } from '../api';
 import { scrollToSection } from '../utils/scroll-utils';
 import { formatDate, getRelativeTime } from '../utils/date-utils';
 import { displayUrl } from '../utils/url-utils';
-import { md5Hash, sha256Hash } from '../utils/crypto-utils';
+import { md5Hash, sha256Hash, mmh3Hash } from '../utils/crypto-utils';
 import { getMimeTypeEmoji } from '../utils/ui-utils';
 import { downloadBlob } from '../utils/file-utils';
 import { formatImageUrl, formatBytes } from '../utils/format-utils';
@@ -691,6 +722,7 @@ export default {
           this.faviconHashes[i] = {
             md5: md5Hash(fav.favicon),
             sha256: await sha256Hash(fav.favicon),
+            mmh3: mmh3Hash(fav.favicon),
           };
         }
       }

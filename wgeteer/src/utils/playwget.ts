@@ -419,7 +419,7 @@ async function playwget(webpage: any): Promise<any> {
       }
     }
   }
-  /*
+  
 
   // Store the favicon data here
   const faviconData: { [url: string]: any } = {};
@@ -432,7 +432,7 @@ async function playwget(webpage: any): Promise<any> {
       response.url.endsWith('favicon.ico') ||
       response.url.includes('/favicon')
     ) {
-      //console.log(`Favicon response received: ${response.url}`);
+      console.log(`Favicon response received: ${response.url}`);
       // Fetch response body via CDP using the correct requestId
       const { body, base64Encoded } = await client.send(
         'Network.getResponseBody',
@@ -444,7 +444,7 @@ async function playwget(webpage: any): Promise<any> {
         : body;
     }
   });
-  */
+  
   try {
     await page.goto(webpage.input, {
       timeout: webpage.option.timeout * 1000,
@@ -540,8 +540,9 @@ async function playwget(webpage: any): Promise<any> {
         webpage.screenshots.push(ssobj);
       }
     }
-    /*
+    
     if (faviconData) {
+      webpage.favicon = [];
       for (const [url, data] of Object.entries(faviconData)) {
         webpage.favicon.push({
           url,
@@ -549,7 +550,7 @@ async function playwget(webpage: any): Promise<any> {
         });
       }
     }
-    */
+    
   } catch (err: any) {
     logger.error(`[${pageId}] ${page.isClosed()} ${err}`);
     if (page.isClosed()) {
