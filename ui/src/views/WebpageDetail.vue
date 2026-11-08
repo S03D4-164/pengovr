@@ -176,6 +176,10 @@
                     <span class="text-xs font-bold opacity-50 min-w-fit">SHA256:</span>
                     <code class="text-xs break-all font-mono">{{ hashes.sha256 }}</code>
                   </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-xs font-bold opacity-50 min-w-fit">MMH3:</span>
+                    <code class="text-xs break-all font-mono">{{ hashes.mmh3 }}</code>
+                  </div>
                 </div>
               </div>
             </div>

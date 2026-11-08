@@ -109,3 +109,95 @@ export const sha256Hash = async (base64Data) => {
     return 'Error';
   }
 };
+
+export const mmh3Hash = (base64Data, seed = 0) => {
+  if (!base64Data) return 'N/A';
+  try {
+    // 1. 76文字ごとに改行区切りを挿入し、末尾にも改行を追加する（Pythonのencodebytes仕様）
+    const formattedBase64 = base64Data.match(/.{1,76}/g).join('\n') + '\n';
+
+    // 2. 整形済みの文字列をUTF-8バイト列に変換
+    const encoder = new TextEncoder();
+    const data = encoder.encode(formattedBase64);
+    
+    // 3. MurmurHash3を適用
+    const unsignedHash = murmurhash3_32(data, seed);
+    
+    // 4. 符号付き32bit整数に変換（Pythonと同じ形式）
+    const signedHash = unsignedHash | 0;  // ビット演算で符号付きに変換
+    
+    return signedHash.toString();
+  } catch (e) {
+    console.error('mmh3Hash error:', e);
+    return 'Error';
+  }
+};
+
+/**
+ * MurmurHash3 32bit実装
+ * https://github.com/garycourt/murmurhash-js を参考
+ */
+const murmurhash3_32 = (data, seed = 0) => {
+  const length = data.length;
+  const c1 = 0xcc9e2d51;
+  const c2 = 0x1b873593;
+  
+  let h1 = seed;
+  let offset = 0;
+  
+  // 4バイト単位でハッシュ処理
+  while (offset + 4 <= length) {
+    let k1 = 
+      ((data[offset] & 0xff)) |
+      ((data[offset + 1] & 0xff) << 8) |
+      ((data[offset + 2] & 0xff) << 16) |
+      ((data[offset + 3] & 0xff) << 24);
+    offset += 4;
+    
+    // k1 *= c1
+    k1 = (((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+    // k1 = rotl32(k1, 15)
+    k1 = (k1 << 15) | (k1 >>> 17);
+    // k1 *= c2
+    k1 = (((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+    
+    h1 ^= k1;
+    // h1 = rotl32(h1, 13)
+    h1 = (h1 << 13) | (h1 >>> 19);
+    // h1 = h1*5 + 0xe6546b64
+    const h1b = ((((h1 & 0xffff) * 5) + ((((h1 >>> 16) * 5) & 0xffff) << 16))) & 0xffffffff;
+    h1 = (((h1b & 0xffff) + 0x6b64) + ((((h1b >>> 16) + 0xe654) & 0xffff) << 16));
+  }
+  
+  // 残りのバイト（0-3バイト）を処理
+  let k1 = 0;
+  const remainder = length & 3;
+  
+  switch (remainder) {
+    case 3:
+      k1 ^= (data[offset + 2] & 0xff) << 16;
+    case 2:
+      k1 ^= (data[offset + 1] & 0xff) << 8;
+    case 1:
+      k1 ^= (data[offset] & 0xff);
+      
+      // k1 *= c1
+      k1 = (((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+      // k1 = rotl32(k1, 15)
+      k1 = (k1 << 15) | (k1 >>> 17);
+      // k1 *= c2
+      k1 = (((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+      h1 ^= k1;
+  }
+  
+  h1 ^= length;
+  
+  // fmix32
+  h1 ^= h1 >>> 16;
+  h1 = (((h1 & 0xffff) * 0x85ebca6b) + ((((h1 >>> 16) * 0x85ebca6b) & 0xffff) << 16)) & 0xffffffff;
+  h1 ^= h1 >>> 13;
+  h1 = (((h1 & 0xffff) * 0xc2b2ae35) + ((((h1 >>> 16) * 0xc2b2ae35) & 0xffff) << 16)) & 0xffffffff;
+  h1 ^= h1 >>> 16;
+  
+  return h1 >>> 0;
+};

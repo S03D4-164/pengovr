@@ -53,6 +53,16 @@ async function pptrEventSet(
       `[${pageId}] Uncaught exception: "${exception.message || exception}"${errorLocation}`,
     );
   });
+  await page.route('**/*favicon*', async (route) => {
+    const headers = {
+      ...route.request().headers(),
+      // faviconハッシュ計算のため'image/webp' を除外するようにAcceptヘッダーを調整
+      'Accept': 'image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5'
+    };
+    
+    // 書き換えたヘッダーでリクエストを続行
+    await route.continue({ headers });
+  });
   // download pdf
   if (webpage.option.pdf) {
     await page.route('**/*', async (route: any, request: any) => {
