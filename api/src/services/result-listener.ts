@@ -104,14 +104,32 @@ export class ResultListener {
             let savedPayload = await PayloadModel.findOne({ md5: p.md5 });
 
             if (!savedPayload && p.s3Key) {
-              // なければS3からダウンロードして保存
-              console.log(`Downloading new payload for MD5: ${p.md5}`);
-              const buffer = await downloadBuffer(p.s3Key);
-              savedPayload = await PayloadModel.findOneAndUpdate(
-                { md5: p.md5 },
-                { ...payloadData, payload: buffer },
-                { upsert: true, returnDocument: 'after' },
-              );
+              console.log(`Processing payload for MD5: ${p.md5} (size: ${p.size || 'unknown'} bytes)`);
+              
+              // 10MBを超えるペイロードはハッシュ値だけ保存
+              if (p.isLargePayload) {
+                console.log(`[ResultListener] Large payload detected (> 10MB): ${p.md5}. Storing hash only.`);
+                savedPayload = await PayloadModel.findOneAndUpdate(
+                  { md5: p.md5 },
+                  { 
+                    md5: p.md5,
+                  },
+                  { upsert: true, returnDocument: 'after' },
+                );
+              } else {
+                // 10MB以下のペイロードはダウンロードして保存
+                console.log(`Downloading payload for MD5: ${p.md5}`);
+                const buffer = await downloadBuffer(p.s3Key);
+                //const text = buffer.toString('utf-8', 0, Math.min(100000, buffer.length));                
+                savedPayload = await PayloadModel.findOneAndUpdate(
+                  { md5: p.md5 },
+                  { 
+                    md5: p.md5, 
+                    payload: buffer,
+                  },
+                  { upsert: true, returnDocument: 'after' },
+                );
+              }
             }
 
             if (savedPayload) {

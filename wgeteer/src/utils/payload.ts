@@ -19,6 +19,10 @@ async function savePayload(
     const s3Key = webpageId
       ? `webpages/${webpageId}/payloads/${md5Hash}`
       : `payloads/${md5Hash}`;
+    
+    // 10MBを超えるファイルはs3Keyのみ記録（バイナリは保存しない）
+    const MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+    const isLargePayload = responseBuffer.length > MAX_PAYLOAD_SIZE;
 
     if (payloadsCollector) {
       // Avoid duplicate payloads in memory based on MD5
@@ -31,6 +35,8 @@ async function savePayload(
           _id: generatedId,
           md5: md5Hash,
           s3Key: s3Key,
+          size: responseBuffer.length,
+          isLargePayload,
           yara: yaraData,
         });
       } else {

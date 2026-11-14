@@ -17,8 +17,7 @@ module.exports = {
         NODE_ENV: 'development',
         DEBUG: 'custom:*',
       },
-      watch:
-        process.env.NODE_ENV !== 'production' ? path.resolve(__dirname) : false,
+      watch: false,
       ignore_watch: ['node_modules', 'public', 'logs'],
       max_memory_restart: '4G',
       error_file: './logs/err.log',
