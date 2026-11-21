@@ -18,17 +18,17 @@ services:
       retries: 5
       start_period: 5s
 
-  wgeteer-dev:
+  worker-dev:
     build:
-      context: wgeteer
+      context: worker
       dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
         - NODE_IMAGE_SHA_DEBIAN_DEV=${NODE_IMAGE_SHA_DEBIAN_DEV}
         - PNPM_VERSION=${PNPM_VERSION}
       cache_from:
-        - wgeteer-dev:latest
-    container_name: wgeteer-dev
+        - worker-dev:latest
+    container_name: worker-dev
     environment:
       - NODE_ENV=development
       - REDIS_HOST=${REDIS_HOST}
@@ -42,14 +42,14 @@ services:
       - S3_BUCKET=${S3_BUCKET}
       - CONCURRENCY=3
       #- X11VNC_PASSWORD="password"
-      - ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+      - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
       - CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
     tty: true
     init: true
     volumes:
-      - ./wgeteer/src:/app/worker/src
+      - ./worker/src:/app/worker/src
       - /app/node_modules
-      - ./wgeteer/logs:/app/worker/logs:Z
+      - ./worker/logs:/app/worker/logs:Z
     working_dir: /app/worker
     command: /bin/bash /app/worker/entrypoint.sh
     mem_limit: 2g
@@ -64,13 +64,13 @@ services:
   # Python Worker Service (with Xvfb for browser automation)
   python-worker-dev:
     build:
-      context: worker
+      context: py-worker
       dockerfile: Dockerfile.dev
       args:
         - DOCKER_BUILDKIT=1
       cache_from:
-        - python-worker-dev:latest
-    container_name: python-worker-dev
+        - py-worker-dev:latest
+    container_name: py-worker-dev
     environment:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=6379
@@ -84,9 +84,9 @@ services:
     tty: true
     init: true
     volumes:
-      - ./worker/src:/app/worker/src
-      - ./worker/logs:/app/worker/logs:Z
-    working_dir: /app/worker
+      - ./py-worker/src:/app/worker/src
+      - ./py-worker/logs:/app/worker/logs:Z
+    working_dir: /app/py-worker
     mem_limit: 2g
     logging:
       driver: 'json-file'

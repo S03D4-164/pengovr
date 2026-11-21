@@ -1,76 +1,71 @@
-FROM python:3.11-slim
+ARG NODE_IMAGE_SHA_DEBIAN_DEV
+ARG PNPM_VERSION
 
-# Install system dependencies including Xvfb and browser requirements
-RUN apt-get update && apt-get install -y \
-    curl \
-    xvfb \
-    x11-utils \
-    libx11-6 \
-    libxext6 \
-    libxrender1 \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libpulse0 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxi6 \
-    libxinerama1 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
-    ca-certificates \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+FROM node@sha256:${NODE_IMAGE_SHA_DEBIAN_DEV}
 
-# Install pip and uv
-RUN pip install --no-cache-dir --upgrade pip uv
+ARG PNPM_VERSION
+ENV APP_HOME=/app/worker
+ENV PNPM_VERSION=${PNPM_VERSION}
+WORKDIR $APP_HOME
 
-WORKDIR /app/worker
+ARG NODE_ENV=development
+ENV NODE_ENV=${NODE_ENV}
+ENV DBUS_SESSION_BUS_ADDRESS=autolaunch:
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Copy project files
-COPY pyproject.toml uv.lock* ./
-COPY . .
+#EXPOSE 5900
 
-# Install dependencies using uv
-RUN uv sync --no-dev
+# aptパッケージのキャッシュを活用するために分離
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
+    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] https://dl-ssl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get purge -y --auto-remove wget gnupg
 
-# Create startup script with Xvfb
-RUN cat > /app/worker/entrypoint.sh << 'EOF'
-#!/bin/bash
-set -e
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install --no-install-recommends -y -o Acquire::Retries=3 -o Acquire::http::Timeout=300 \
+       libxss1 telnet xvfb google-chrome-stable dbus dbus-x11 procps fluxbox scrot \
+       fonts-ipafont-gothic fonts-nanum fonts-wqy-microhei fonts-dejavu-core fonts-droid-fallback fonts-liberation fonts-noto-core fonts-noto-color-emoji fonts-opensymbol fonts-urw-base35 locales \
+    && echo "ja_JP.UTF-8 UTF-8" >> /etc/locale.gen \
+    && locale-gen \
+    && mkdir -p $APP_HOME && chown -R node:node /app \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /src/*.deb /usr/share/icons/Adwaita /usr/share/icons/hicolor /usr/share/doc \
+    && cd /opt/google/chrome/locales && find . -type f ! -name 'en-US.pak' ! -name 'ja.pak' -delete
 
-export DISPLAY=:99
-export PATH="/app/worker/.venv/bin:$PATH"
+ENV LANG=ja_JP.UTF-8
+ENV LC_ALL=ja_JP.UTF-8
 
-echo "Starting Xvfb on DISPLAY=$DISPLAY..."
-rm -f /tmp/.X99-lock 2>/dev/null || true
-Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
-XVFB_PID=$!
-sleep 2
+# pnpm 11 の直接インストール（ダウンロード回避）
+RUN npm cache clean --force && npm uninstall -g pnpm || true && npm install -g pnpm@${PNPM_VERSION} --allow-scripts=pnpm --force && npm cache clean --force
 
-echo "Xvfb started with PID $XVFB_PID"
+# pnpm キャッシュディレクトリを先に作成してパーミッションを設定
+RUN mkdir -p /home/node/.local/share/pnpm/store && chown -R node:node /home/node/.local/share/pnpm
 
-# Run the Python worker
-exec uv run src/main.py
+# 依存関係ファイルのみ先にコピー
+COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --chown=node:node pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --chown=node:node ecosystem.config.cjs ./
+COPY --chown=node:node entrypoint.sh ./
+COPY --chown=node:node src ./src
 
-EOF
+# Fluxbox 設定をビルド時に配置
+RUN mkdir -p /home/node/.fluxbox && chown node:node /home/node/.fluxbox
+COPY --chown=node:node fluxbox_init /home/node/.fluxbox/init
 
-RUN chmod +x /app/worker/entrypoint.sh
+# 最終的な権限調整とログディレクトリ作成（特定のターゲットのみ実施）
+RUN mkdir -p ./logs && \
+    chown node:node ./logs && \
+    chmod +x ./entrypoint.sh
 
-ENTRYPOINT ["/app/worker/entrypoint.sh"]
+USER node
+
+# 依存関係インストール
+RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store --silent
+
+CMD ["/bin/bash", "./entrypoint.sh"]

@@ -21,7 +21,7 @@ services:
   # Worker Service
   worker-prod:
     build:
-      context: wgeteer
+      context: worker
       dockerfile: Dockerfile.alpine
       args:
         - DOCKER_BUILDKIT=1
