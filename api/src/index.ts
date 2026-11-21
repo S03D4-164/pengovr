@@ -170,7 +170,7 @@ app.locals.schedulerQueue = schedulerQueue;
 
 // Initialize Bull Board
 const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath('/admin/queues');
+serverAdapter.setBasePath('/api/bullboard');
 
 createBullBoard({
   queues: [
@@ -227,7 +227,7 @@ app.use('/api/screenshots', screenshotRoutes);
 app.use('/api/yaras', yaraRoutes);
 app.use('/api/ai', aiExplainRoutes);
 app.use('/api/user-agents', userAgentsRoutes);
-app.use('/admin/queues', serverAdapter.getRouter());
+app.use('/api/bullboard', serverAdapter.getRouter());
 
 // Error handling
 app.use((err: Error, req: any, res: any, next: any) => {

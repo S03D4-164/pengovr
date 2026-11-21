@@ -42,7 +42,7 @@
             >
           </li>
           <li>
-            <a href="/admin/queues" target="_blank" rel="noopener noreferrer"
+            <a href="/api/bullboard" target="_blank" rel="noopener noreferrer"
               >Queues</a
             >
           </li>
