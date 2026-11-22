@@ -37,81 +37,127 @@ app.get('/health', (req: Request, res: Response) => {
 /**
  * v5 API Endpoint - Direct hash search
  */
-app.post('/v5/hashes:search', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { hashPrefixes } = req.body;
+app.post(
+  '/v5/hashes:search',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { hashPrefixes } = req.body;
 
-    if (!Array.isArray(hashPrefixes) || hashPrefixes.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid request: hashPrefixes array is required',
-      });
+      if (!Array.isArray(hashPrefixes) || hashPrefixes.length === 0) {
+        return res.status(400).json({
+          error: 'Invalid request: hashPrefixes array is required',
+        });
+      }
+
+      console.log('Searching hashes:', hashPrefixes);
+      const result = await sbClient.searchHashes(hashPrefixes);
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error in hashes:search:', error.message);
+      next(error);
     }
+  },
+);
 
-    console.log('Searching hashes:', hashPrefixes);
-    const result = await sbClient.searchHashes(hashPrefixes);
+/**
+ * v5 API Endpoint - Direct URL search
+ * Proxies to: GET https://safebrowsing.googleapis.com/v5/urls:search
+ */
+app.post(
+  '/v5/urls:search',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { urls } = req.body;
 
-    res.json(result);
-  } catch (error: any) {
-    console.error('Error in hashes:search:', error.message);
-    next(error);
-  }
-});
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({
+          error: 'Invalid request: urls array is required',
+        });
+      }
+
+      if (urls.length > 50) {
+        return res.status(400).json({
+          error: 'Invalid request: maximum 50 URLs per request',
+        });
+      }
+
+      console.log('Searching URLs:', urls);
+      const result = await sbClient.searchUrls(urls);
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error in urls:search:', error.message);
+      next(error);
+    }
+  },
+);
 
 /**
  * v5 API Endpoint - Threat check for URLs
  */
-app.post('/v5/threatMatches:find', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+app.post(
+  '/v5/threatMatches:find',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    const threatInfo = req.body?.threatInfo;
-    if (!threatInfo || !threatInfo.threatEntries || threatInfo.threatEntries.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid request: threatInfo.threatEntries is required',
-      });
-    }
+      const threatInfo = req.body?.threatInfo;
+      if (
+        !threatInfo ||
+        !threatInfo.threatEntries ||
+        threatInfo.threatEntries.length === 0
+      ) {
+        return res.status(400).json({
+          error: 'Invalid request: threatInfo.threatEntries is required',
+        });
+      }
 
-    const threatEntries = threatInfo.threatEntries;
-    const results: any[] = [];
+      const threatEntries = threatInfo.threatEntries;
+      const results: any[] = [];
 
-    // Process each threat entry
-    for (const entry of threatEntries) {
-      if (entry.url) {
-        console.log('Looking up URL:', entry.url);
-        const lookupResult = await sbClient.lookupUrl(entry.url);
+      // Process each threat entry
+      for (const entry of threatEntries) {
+        if (entry.url) {
+          console.log('Looking up URL:', entry.url);
+          const lookupResult = await sbClient.lookupUrl(entry.url);
 
-        if (lookupResult.error) {
-          console.error('Error looking up URL:', lookupResult.error);
-          continue;
-        }
+          if (lookupResult.error) {
+            console.error('Error looking up URL:', lookupResult.error);
+            continue;
+          }
 
-        if (lookupResult.threatMatches && lookupResult.threatMatches.length > 0) {
-          const matches = lookupResult.threatMatches.map((threat) => ({
-            threatType: threat.threatType,
-            threat: {
-              url: entry.url,
-            },
-            cacheDuration: threat.cacheDuration,
-            listName: threat.listName,
-          }));
+          if (
+            lookupResult.threatMatches &&
+            lookupResult.threatMatches.length > 0
+          ) {
+            const matches = lookupResult.threatMatches.map((threat) => ({
+              threatType: threat.threatType,
+              threat: {
+                url: entry.url,
+              },
+              cacheDuration: threat.cacheDuration,
+              listName: threat.listName,
+            }));
 
-          results.push(...matches);
+            results.push(...matches);
+          }
         }
       }
-    }
 
-    const response: any = {};
-    if (results.length > 0) {
-      response.matches = results;
-    }
+      const response: any = {};
+      if (results.length > 0) {
+        response.matches = results;
+      }
 
-    console.log('Response:', JSON.stringify(response, null, 2));
-    res.json(response);
-  } catch (error: any) {
-    console.error('Error in threatMatches:find:', error.message);
-    next(error);
-  }
-});
+      console.log('Response:', JSON.stringify(response, null, 2));
+      res.json(response);
+    } catch (error: any) {
+      console.error('Error in threatMatches:find:', error.message);
+      next(error);
+    }
+  },
+);
 
 // Error handling middleware
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
