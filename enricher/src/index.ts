@@ -18,6 +18,11 @@ import geminiExplain from './utils/gemini.js';
 import bedrockExplain from './utils/bedrock.js';
 import { vt } from './utils/vt.js';
 import { lookupUrl } from './utils/gsblookup.js';
+import {
+  initializeSafeBrowsingClientV5,
+  disconnectSafeBrowsingClientV5,
+  lookupUrlV5,
+} from './utils/gsblookup-v5.js';
 
 class EnrichmentWorker {
   private worker: Worker | null = null;
@@ -70,6 +75,18 @@ class EnrichmentWorker {
         console.error(`Error checking/creating S3 bucket: ${error.message}`);
         throw error; // 起動時に致命的なエラーとして扱う
       }
+    }
+
+    // SafeBrowsingClient v5 の初期化
+    try {
+      await initializeSafeBrowsingClientV5();
+      console.log('SafeBrowsingClient v5 initialized');
+    } catch (error: any) {
+      console.warn(
+        'SafeBrowsingClient v5 initialization failed:',
+        error.message,
+      );
+      // 初期化失敗は致命的ではない（オプション機能のため）
     }
   }
 
@@ -351,6 +368,16 @@ class EnrichmentWorker {
       return;
     }
 
+    // Handle GSB v5 lookup task
+    if (taskType === 'gsb_lookup_v5') {
+      if (websiteId && taskUrl) {
+        await this.processGSBLookupV5Task(taskId, websiteId, taskUrl);
+      } else {
+        console.error('GSB v5 lookup task missing websiteId or url');
+      }
+      return;
+    }
+
     // Cache for IP and DNS info within this task
     const ipInfoCache = new Map<string, any>();
     const dnsInfoCache = new Map<string, any>();
@@ -609,8 +636,22 @@ class EnrichmentWorker {
       console.log(
         `Processing GSB lookup task for website ${websiteId}, url: ${url}`,
       );
-      // lookupSiteはWebsiteModelを使用してしまうため、直接lookupUrlを使用して検査のみ行う
-      const result = await lookupUrl(url);
+
+      // v5 APIが利用可能か確認
+      let result;
+      try {
+        console.log(`Attempting GSB v5 lookup for ${url}`);
+        result = await lookupUrlV5(url);
+        if (!result.error) {
+          console.log(`GSB v5 lookup successful for ${url}`);
+        }
+      } catch (v5Error: any) {
+        console.warn(
+          `GSB v5 lookup failed, falling back to v4:`,
+          v5Error.message,
+        );
+        result = await lookupUrl(url);
+      }
 
       const resultKey = `websites/${websiteId}/gsb/${taskId}.json`;
       const resultData = {
@@ -639,6 +680,46 @@ class EnrichmentWorker {
       );
     }
   }
+
+  async processGSBLookupV5Task(
+    taskId: string,
+    websiteId: string,
+    url: string,
+  ): Promise<void> {
+    try {
+      console.log(
+        `Processing GSB v5 lookup task for website ${websiteId}, url: ${url}`,
+      );
+
+      const result = await lookupUrlV5(url);
+
+      const resultKey = `websites/${websiteId}/gsb-v5/${taskId}.json`;
+      const resultData = {
+        taskId,
+        websiteId,
+        url,
+        gsb: result,
+      };
+      await this.uploadToS3(
+        resultKey,
+        JSON.stringify(resultData),
+        'application/json',
+      );
+      console.log(`GSB v5 lookup results saved to SeaweedFS: ${resultKey}`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(
+        `Error processing GSB v5 lookup for website ${websiteId}:`,
+        errorMessage,
+      );
+      await this.uploadToS3(
+        `results/gsb-v5-${taskId}-error.txt`,
+        errorMessage,
+        'text/plain',
+      );
+    }
+  }
 }
 
 const enrichmentWorker = new EnrichmentWorker();
@@ -657,6 +738,7 @@ enrichmentWorker
 process.on('SIGINT', async () => {
   console.log('Received SIGINT, shutting down enrichment worker gracefully...');
   await enrichmentWorker.stop();
+  await disconnectSafeBrowsingClientV5();
   await enrichmentWorker.redis.disconnect();
   process.exit(0);
 });
@@ -666,6 +748,7 @@ process.on('SIGTERM', async () => {
     'Received SIGTERM, shutting down enrichment worker gracefully...',
   );
   await enrichmentWorker.stop();
+  await disconnectSafeBrowsingClientV5();
   await enrichmentWorker.redis.disconnect();
   process.exit(0);
 });

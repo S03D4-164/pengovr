@@ -82,11 +82,15 @@
                 <th class="w-1/3 opacity-60">Status</th>
                 <td>
                   <div
-                    v-if="website.gsb?.lookup?.matches?.length > 0"
+                    v-if="
+                      website.gsb?.lookup?.threatMatches?.length > 0 ||
+                      website.gsb?.lookup?.matches?.length > 0
+                    "
                     class="flex flex-wrap gap-1"
                   >
                     <span
-                      v-for="(warning, idx) in website.gsb.lookup.matches"
+                      v-for="(warning, idx) in website.gsb.lookup
+                        .threatMatches || website.gsb.lookup.matches"
                       :key="idx"
                       class="badge badge-error badge-md text-white"
                     >
@@ -94,7 +98,10 @@
                     </span>
                   </div>
                   <span
-                    v-else-if="website.gsb?.lookup?.matches"
+                    v-else-if="
+                      website.gsb?.lookup?.threatMatches !== undefined ||
+                      website.gsb?.lookup?.matches !== undefined
+                    "
                     class="badge badge-success badge-md text-white"
                     >GSB Safe</span
                   >
@@ -126,6 +133,17 @@
                   class="loading loading-spinner loading-sm"
                 ></span>
                 {{ gsbLoading ? 'Checking...' : 'Check GSB' }}
+              </button>
+              <button
+                @click="runGSBLookupV5"
+                :disabled="gsbLoadingV5"
+                class="btn btn-sm btn-accent"
+              >
+                <span
+                  v-if="gsbLoadingV5"
+                  class="loading loading-spinner loading-sm"
+                ></span>
+                {{ gsbLoadingV5 ? 'Checking V5...' : 'Check GSB V5' }}
               </button>
             </div>
           </div>
@@ -289,6 +307,11 @@ export default {
       gsbSuccess: false,
       gsbTaskId: '',
       gsbPollingInterval: null,
+      gsbLoadingV5: false,
+      gsbMessageV5: '',
+      gsbSuccessV5: false,
+      gsbTaskIdV5: '',
+      gsbPollingIntervalV5: null,
     };
   },
   computed: {
@@ -316,6 +339,10 @@ export default {
     if (this.gsbPollingInterval) {
       clearInterval(this.gsbPollingInterval);
       this.gsbPollingInterval = null;
+    }
+    if (this.gsbPollingIntervalV5) {
+      clearInterval(this.gsbPollingIntervalV5);
+      this.gsbPollingIntervalV5 = null;
     }
   },
   methods: {
@@ -513,6 +540,87 @@ export default {
           clearInterval(this.gsbPollingInterval);
           this.gsbPollingInterval = null;
           this.gsbMessage = 'Polling timeout - check result manually';
+        }
+      }, 300000);
+    },
+    async runGSBLookupV5() {
+      if (!this.website?._id || !this.website?.url) {
+        this.gsbMessageV5 = 'Website info missing';
+        this.gsbSuccessV5 = false;
+        return;
+      }
+
+      this.gsbLoadingV5 = true;
+      this.gsbMessageV5 = '';
+      try {
+        const response = await fetch(
+          `/api/websites/${this.website._id}/gsb-lookup-v5`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          this.gsbTaskIdV5 = data.taskId;
+          this.gsbMessageV5 = 'Task queued, waiting for result...';
+          this.gsbSuccessV5 = true;
+          console.log('GSB v5 lookup task queued:', this.gsbTaskIdV5);
+
+          // Start polling for result
+          this.pollGSBResultV5(this.gsbTaskIdV5);
+        } else {
+          const error = await response.json();
+          console.error('Failed to queue GSB v5 lookup:', error);
+          this.gsbMessageV5 = 'Queue failed';
+          this.gsbSuccessV5 = false;
+        }
+      } catch (error) {
+        console.error('Error running GSB v5 lookup:', error);
+        this.gsbMessageV5 = 'Error occurred';
+        this.gsbSuccessV5 = false;
+      } finally {
+        this.gsbLoadingV5 = false;
+      }
+    },
+    pollGSBResultV5(taskId) {
+      // Clear any existing polling
+      if (this.gsbPollingIntervalV5) {
+        clearInterval(this.gsbPollingIntervalV5);
+      }
+
+      // Poll every 2 seconds to fetch updated website data
+      this.gsbPollingIntervalV5 = setInterval(async () => {
+        try {
+          const updatedWebsite = await fetch(
+            `/api/websites/${this.website._id}`,
+          ).then((res) => res.json());
+
+          // Check if GSB v5 result has been populated
+          if (updatedWebsite.gsb && updatedWebsite.gsb.lookup) {
+            clearInterval(this.gsbPollingIntervalV5);
+            this.gsbPollingIntervalV5 = null;
+
+            // Update website data with result
+            this.website = updatedWebsite;
+            this.gsbMessageV5 = 'GSB v5 check completed';
+            this.gsbSuccessV5 = true;
+          }
+          // If pending, continue polling
+        } catch (err) {
+          console.error('Error polling GSB v5 result:', err);
+        }
+      }, 2000);
+
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        if (this.gsbPollingIntervalV5) {
+          clearInterval(this.gsbPollingIntervalV5);
+          this.gsbPollingIntervalV5 = null;
+          this.gsbMessageV5 = 'Polling timeout - check result manually';
         }
       }, 300000);
     },

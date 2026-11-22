@@ -156,18 +156,27 @@
                   {{ displayUrl(website.url) }}
                 </div>
                 <div
-                  v-if="website.gsb?.lookup?.matches?.length > 0"
+                  v-if="
+                    website.gsb?.lookup?.matches?.length > 0 ||
+                    website.gsb?.lookup?.threatMatches?.length > 0
+                  "
                   class="flex flex-wrap gap-1"
                 >
                   <span
-                    v-for="(warning, idx) in website.gsb.lookup.matches"
+                    v-for="(warning, idx) in website.gsb.lookup.matches ||
+                    website.gsb.lookup.threatMatches"
                     :key="idx"
                     class="badge badge-error badge-md text-white"
                   >
                     {{ warning.threatType }}
                   </span>
                 </div>
-                <div v-else-if="website.gsb?.lookup?.matches">
+                <div
+                  v-else-if="
+                    website.gsb?.lookup?.matches !== undefined ||
+                    website.gsb?.lookup?.threatMatches !== undefined
+                  "
+                >
                   <span class="badge badge-success badge-md text-white"
                     >GSB Safe</span
                   >

@@ -82,6 +82,38 @@ export function initResultListeners(
         );
         return;
       }
+    } else if (job.name === 'gsb_lookup_v5') {
+      const websiteId = job.data.websiteId;
+      const s3Key = `websites/${websiteId}/gsb-v5/${jobId}.json`;
+      const gsbResult = await getJsonFromS3(s3Key);
+      if (gsbResult) {
+        console.log(
+          `[ResultProcessor] GSB v5 result retrieved from S3: ${s3Key}`,
+        );
+        console.log(
+          `[ResultProcessor] GSB v5 threats found: ${JSON.stringify(gsbResult.gsb)}`,
+        );
+
+        // S3から取得したデータ: { threatMatches: [...] } または { threats: [...] }
+        const threatCount =
+          gsbResult.gsb.threatMatches?.length ||
+          gsbResult.gsb.threats?.length ||
+          0;
+
+        await WebsiteModel.findByIdAndUpdate(gsbResult.websiteId, {
+          $set: { gsb: { lookup: gsbResult.gsb } },
+        });
+        console.log(
+          `[ResultProcessor] MongoDB: GSB v5 matches (${threatCount}) saved for Website ${gsbResult.websiteId}`,
+        );
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: config.s3.bucket,
+            Key: s3Key,
+          }),
+        );
+        return;
+      }
     } else if (['enrichment', 'yara', 'wappalyzer', 'dns'].includes(job.name)) {
       // Worker側で保存した jobId.json を取得
       const targetWebpageId = job.data.webpageId;

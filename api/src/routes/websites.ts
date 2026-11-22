@@ -270,6 +270,43 @@ router.post('/:id/gsb-lookup', async (req, res) => {
   }
 });
 
+// Trigger GSB v5 lookup for a website
+router.post('/:id/gsb-lookup-v5', async (req, res) => {
+  try {
+    const website = await WebsiteModel.findById(req.params.id);
+
+    if (!website) {
+      return res.status(404).json({ error: 'Website not found' });
+    }
+
+    // Add GSB v5 lookup task to enrichment queue
+    const enrichmentQueue = req.app.locals.enrichmentQueue;
+    const gsbTaskId = uuidv4();
+    await enrichmentQueue.add(
+      'gsb_lookup_v5',
+      {
+        id: gsbTaskId,
+        type: 'gsb_lookup_v5',
+        websiteId: website._id.toString(),
+        url: website.url,
+        timestamp: new Date().toISOString(),
+      },
+      { jobId: gsbTaskId },
+    );
+
+    console.log(
+      `GSB v5 lookup task queued for website ${website._id}: ${website.url}`,
+    );
+    res.json({
+      message: 'GSB v5 lookup task queued successfully',
+      taskId: gsbTaskId,
+    });
+  } catch (error) {
+    console.error('Error queuing GSB v5 lookup:', error);
+    res.status(500).json({ error: 'Failed to queue GSB v5 lookup' });
+  }
+});
+
 // Update website track settings
 router.patch('/:id', async (req, res) => {
   try {
