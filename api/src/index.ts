@@ -135,7 +135,7 @@ redis.on('error', (err: Error) => {
 
 // Initialize BullMQ Queue
 const scrapingQueue = new Queue(config.queueName, {
-  connection: redis,
+  connection: redis as any,
   defaultJobOptions: {
     removeOnComplete: 100, // 完了したジョブを100件まで保持して確認可能にする
     removeOnFail: 100, // 失敗したジョブを100件まで保持してデバッグ可能にする
@@ -146,7 +146,7 @@ const scrapingQueue = new Queue(config.queueName, {
 
 // Initialize Enrichment Queue (for GSB, Gemini, VT, etc.)
 const enrichmentQueue = new Queue(config.enrichmentQueue, {
-  connection: redis,
+  connection: redis as any,
   defaultJobOptions: {
     removeOnComplete: 100, // 完了したジョブを100件まで保持
     removeOnFail: 100, // 失敗したジョブを100件まで保持
@@ -157,7 +157,7 @@ const enrichmentQueue = new Queue(config.enrichmentQueue, {
 
 // Initialize Scheduler Queue
 const schedulerQueue = new Queue('tracking-scheduler', {
-  connection: redis,
+  connection: redis as any,
 }).on('error', (err) => {
   if (shouldLog()) logError('BullMQ Queue Error (Scheduler)', err);
 });
@@ -208,7 +208,7 @@ redis.once('ready', () => {
 });
 
 // Health check endpoint
-app.get('/health', (req: any, res: any) => {
+app.get('/api/health', (req: any, res: any) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),

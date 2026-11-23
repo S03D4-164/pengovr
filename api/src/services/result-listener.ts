@@ -23,11 +23,11 @@ export class ResultListener {
 
   constructor(redisConnection: Redis, enrichmentQueue: Queue) {
     this.queueEvents = new QueueEvents(config.queueName, {
-      connection: redisConnection,
+      connection: redisConnection as any,
     });
     this.enrichmentQueue = enrichmentQueue;
     this.flowProducer = new FlowProducer({
-      connection: redisConnection,
+      connection: redisConnection as any,
     }).on('error', (err) => {
       if (shouldLog()) {
         logError('BullMQ FlowProducer Error', err);

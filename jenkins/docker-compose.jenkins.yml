@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Docker レジストリ（ローカル）
+  registry:
+    image: registry:2
+    container_name: docker-registry
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    restart: unless-stopped
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+
+  # Jenkins
+  jenkins:
+    build:
+      context: ..
+      dockerfile: jenkins/Dockerfile.jenkins
+    container_name: jenkins
+    user: root  # Docker Socketアクセス用
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      # Docker Socketをマウント（ホストのDockerを操作）
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Jenkinsのデータ永続化
+      - jenkins-data:/var/jenkins_home
+      # ホストのgitリポジトリにアクセス可能にする
+      - /home/ubuntu/dev2/pengovr:/workspace/pengovr:ro
+    environment:
+      - JAVA_OPTS=-Dhudson.model.UpdateCenter.never=true
+      - JENKINS_JAVA_OPTIONS=-Dhudson.model.UpdateCenter.never=true
+    restart: unless-stopped
+    networks:
+      - jenkins-network
+
+networks:
+  jenkins-network:
+    driver: bridge
+
+volumes:
+  jenkins-data:
+  registry-data:

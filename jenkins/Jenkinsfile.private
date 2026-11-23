@@ -1,0 +1,240 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = 'localhost:5000'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        COMPOSE_FILE = 'docker-compose.staging-private.yml'
+        TAG = "${env.BUILD_NUMBER}"
+        DOCKER_BUILDKIT = '0'
+    }
+
+    // triggers なし → 手動実行のみ
+
+    stages {
+        stage('Checkout') {
+            steps {
+                sh '''
+                    echo "Syncing workspace from /workspace/pengovr..."
+                    rm -rf "${WORKSPACE:?}"/* "${WORKSPACE:?}"/.[!.]* 2>/dev/null || true
+                    cp -a /workspace/pengovr/. "${WORKSPACE}/"
+                    
+                    # Fix seaweedfs s3.json if it's a directory (defensive check)
+                    if [ -d "${WORKSPACE}/seaweedfs/s3.json" ]; then
+                        echo "ERROR: seaweedfs/s3.json is a directory, removing and recreating as file"
+                        rm -rf "${WORKSPACE}/seaweedfs/s3.json"
+                        
+                        # Create s3.json as a proper file
+                        cat > "${WORKSPACE}/seaweedfs/s3.json" << 'JSON_EOF'
+{
+  "identities": [
+    {
+      "name": "pengovr-admin",
+      "credentials": [
+        {
+          "accessKey": "pengovr-admin",
+          "secretKey": "pengovr-password"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging", "Admin"]
+    }
+  ]
+}
+JSON_EOF
+                        echo "✓ s3.json recreated as a proper file"
+                    fi
+                    
+                    # Fix nginx/default.conf if it's a directory
+                    if [ -d "${WORKSPACE}/nginx/default.conf" ]; then
+                        echo "ERROR: nginx/default.conf is a directory, removing and recreating as file"
+                        rm -rf "${WORKSPACE}/nginx/default.conf"
+                        
+                        # Create default.conf as a proper file
+                        cat > "${WORKSPACE}/nginx/default.conf" << 'NGINX_EOF'
+server {
+    listen 80;
+    
+    # API プロキシを最初に定義（try_files の対象外にする）
+    location /api/ {
+        proxy_pass http://api-staging:3000/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # UI 配信
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGINX_EOF
+                        echo "✓ default.conf recreated as a proper file"
+                    fi
+                    
+                    # Verify files exist and are files (not directories)
+                    if [ ! -f "${WORKSPACE}/seaweedfs/s3.json" ]; then
+                        echo "ERROR: seaweedfs/s3.json verification failed"
+                        exit 1
+                    fi
+                    if [ ! -f "${WORKSPACE}/nginx/default.conf" ]; then
+                        echo "ERROR: nginx/default.conf verification failed"
+                        exit 1
+                    fi
+                    echo "✓ All config files properly set up"
+                '''
+            }
+        }
+
+        stage('Detect Changes') {
+            steps {
+                sh '''
+                    echo "=== Skipping change detection (manual deployment) ==="
+                    printf 'BUILD_API=true\nBUILD_UI=true\n' > "${WORKSPACE}/build.env"
+                '''
+            }
+        }
+
+        stage('Load Environment') {
+            steps {
+                sh '''
+                    set +x
+                    set -e
+                    if [ -f .env ]; then
+                        echo "Loading .env file (values hidden)"
+                        loaded_count=0
+                        while IFS= read -r line || [ -n "$line" ]; do
+                            trimmed="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+                            [ -z "$trimmed" ] && continue
+                            case "$trimmed" in
+                                '#'*) continue ;;
+                            esac
+                            key="${trimmed%%=*}"
+                            val="${trimmed#*=}"
+                            case "$key" in
+                                [A-Za-z_][A-Za-z0-9_]* )
+                                    eval "export ${key}=${val}"
+                                    loaded_count=$((loaded_count + 1))
+                                    ;;
+                            esac
+                        done < .env
+                        echo "✓ Loaded ${loaded_count} variables"
+                    else
+                        echo "Warning: .env file not found"
+                    fi
+                '''
+            }
+        }
+
+        stage('Build API Image') {
+            when {
+                expression {
+                    def path = "${env.WORKSPACE}/build.env"
+                    return fileExists(path) && readFile(path).contains('BUILD_API=true')
+                }
+            }
+            steps {
+                sh '''
+                    set -e
+                    echo "Building & pushing API image..."
+                    docker build \
+                        -t ${REGISTRY}/pengovr-api:latest \
+                        -f api/Dockerfile.prod \
+                        .
+                    #docker push ${REGISTRY}/pengovr-api:${IMAGE_TAG}
+                    docker push ${REGISTRY}/pengovr-api:latest
+                '''
+            }
+        }
+
+        stage('Build UI Image') {
+            when {
+                expression {
+                    def path = "${env.WORKSPACE}/build.env"
+                    return fileExists(path) && readFile(path).contains('BUILD_UI=true')
+                }
+            }
+            steps {
+                sh '''
+                    set -e
+                    echo "Building & pushing UI image..."
+                    docker build \
+                        -t ${REGISTRY}/pengovr-ui:latest \
+                        -f ui/Dockerfile.prod \
+                        .
+                    #docker push ${REGISTRY}/pengovr-ui:${IMAGE_TAG}
+                    docker push ${REGISTRY}/pengovr-ui:latest
+                '''
+            }
+        }
+
+        stage('Deploy to Staging (Private NW)') {
+            steps {
+                sh '''
+                    set -e
+                    echo "Deploying to staging environment (Private Network)..."
+                    docker network inspect pengovr-private > /dev/null 2>&1 || docker network create pengovr-private
+                    docker compose -f ${COMPOSE_FILE} down || true
+                    docker compose -f ${COMPOSE_FILE} up -d
+                '''
+            }
+        }
+
+        stage('Health Check - Private NW') {
+            steps {
+                sh '''
+                    set -e
+                    echo "Waiting for services to be ready..."
+                    sleep 10
+
+                    if docker compose -f ${COMPOSE_FILE} exec -T mongo1 mongo --eval "db.adminCommand('ping')" > /dev/null 2>&1; then
+                        echo "✓ MongoDB is healthy"
+                    else
+                        echo "✗ MongoDB health check failed"
+                        docker compose -f ${COMPOSE_FILE} logs mongo1
+                        exit 1
+                    fi
+
+                    RETRIES=5
+                    while [ $RETRIES -gt 0 ]; do
+                        if docker compose -f ${COMPOSE_FILE} exec -T ui-staging curl -f http://localhost/api/health > /dev/null 2>&1; then
+                            echo "✓ API is healthy"
+                            break
+                        fi
+                        RETRIES=$((RETRIES - 1))
+                        sleep 2
+                    done
+
+                    if [ $RETRIES -eq 0 ]; then
+                        echo "✗ API health check failed"
+                        docker compose -f ${COMPOSE_FILE} logs api-staging
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                echo "=== Private Network Status ==="
+                docker compose -f ${COMPOSE_FILE} ps || true
+            '''
+        }
+        failure {
+            sh '''
+                echo "=== Deployment Failed - Collecting Logs ==="
+                docker compose -f ${COMPOSE_FILE} logs --tail=50 || true
+            '''
+        }
+        success {
+            echo "✓ Private Network Deployment successful!"
+        }
+    }
+}

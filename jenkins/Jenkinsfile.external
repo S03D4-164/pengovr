@@ -1,0 +1,231 @@
+pipeline {
+    agent any
+    
+    environment {
+        REGISTRY = 'localhost:5000'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        COMPOSE_FILE = 'docker-compose.staging-external.yml'
+        TAG = "${env.BUILD_NUMBER}"
+        DOCKER_BUILDKIT = '0'
+    }
+    
+    // triggers なし → 手動実行のみ
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                sh '''
+                    echo "Syncing workspace from /workspace/pengovr..."
+                    rm -rf "${WORKSPACE:?}"/* "${WORKSPACE:?}"/.[!.]* 2>/dev/null || true
+                    cp -a /workspace/pengovr/. "${WORKSPACE}/"
+                    
+                    # Fix seaweedfs s3.json if it's a directory
+                    if [ -d "${WORKSPACE}/seaweedfs/s3.json" ]; then
+                        echo "ERROR: seaweedfs/s3.json is a directory, removing and recreating as file"
+                        rm -rf "${WORKSPACE}/seaweedfs/s3.json"
+                        
+                        # Create s3.json as a proper file
+                        cat > "${WORKSPACE}/seaweedfs/s3.json" << 'JSON_EOF'
+{
+  "identities": [
+    {
+      "name": "pengovr-admin",
+      "credentials": [
+        {
+          "accessKey": "pengovr-admin",
+          "secretKey": "pengovr-password"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging", "Admin"]
+    }
+  ]
+}
+JSON_EOF
+                        echo "✓ s3.json recreated as a proper file"
+                    fi
+                    
+                    # Verify s3.json is a file
+                    if [ ! -f "${WORKSPACE}/seaweedfs/s3.json" ]; then
+                        echo "ERROR: s3.json verification failed"
+                        exit 1
+                    fi
+                    echo "✓ seaweedfs/s3.json is properly set up"
+                '''
+            }
+        }
+        
+        stage('Detect Changes') {
+            steps {
+                script {
+                    sh '''
+                        echo "=== Skipping change detection (manual deployment) ==="
+                        echo "BUILD_WORKER=true" >> $WORKSPACE/build.env
+                        echo "BUILD_ENRICHER=true" >> $WORKSPACE/build.env
+                    '''
+                }
+            }
+        }
+        
+        stage('Load Environment') {
+            steps {
+                sh '''
+                    set +x
+                    set -e
+                    if [ -f .env ]; then
+                        echo "Loading .env file (values hidden)"
+                        loaded_count=0
+                        while IFS= read -r line || [ -n "$line" ]; do
+                            trimmed="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+                            [ -z "$trimmed" ] && continue
+                            case "$trimmed" in
+                                '#'*) continue ;;
+                            esac
+                            key="${trimmed%%=*}"
+                            val="${trimmed#*=}"
+                            case "$key" in
+                                [A-Za-z_][A-Za-z0-9_]* )
+                                    eval "export ${key}=${val}"
+                                    loaded_count=$((loaded_count + 1))
+                                    ;;
+                            esac
+                        done < .env
+                        echo "✓ Loaded ${loaded_count} variables"
+                    else
+                        echo "Warning: .env file not found"
+                    fi
+                '''
+            }
+        }
+        
+        stage('Build Worker Image') {
+            when {
+                expression {
+                    return fileExists('$WORKSPACE/build.env') && readFile('$WORKSPACE/build.env').contains('BUILD_WORKER=true')
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Building Worker image..."
+                        docker build \
+                            -t ${REGISTRY}/pengovr-worker:latest \
+                            -f worker/Dockerfile.prod \
+                            . || exit 1
+                        docker push ${REGISTRY}/pengovr-worker:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Build Enricher Image') {
+            when {
+                expression {
+                    return fileExists('$WORKSPACE/build.env') && readFile('$WORKSPACE/build.env').contains('BUILD_ENRICHER=true')
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "Building Enricher image..."
+                        docker build \
+                            -t ${REGISTRY}/pengovr-enricher:latest \
+                            -f enricher/Dockerfile.prod \
+                            . || exit 1
+                        docker push ${REGISTRY}/pengovr-enricher:latest
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Staging (External NW)') {
+            steps {
+                script {
+                    sh '''
+                        echo "Deploying to staging environment (External Network)..."
+                        
+                        # Ensure network exists
+                        docker network inspect pengovr-external > /dev/null 2>&1 || docker network create pengovr-external
+                        
+                        # Deploy
+                        docker compose -f ${COMPOSE_FILE} down || true
+                        docker compose -f ${COMPOSE_FILE} up -d
+                    '''
+                }
+            }
+        }
+        
+        stage('Health Check - External NW') {
+            steps {
+                script {
+                    sh '''
+                        echo "Waiting for services to be ready..."
+                        sleep 15
+                        
+                        # Check Redis
+                        RETRIES=5
+                        while [ $RETRIES -gt 0 ]; do
+                            if docker compose -f ${COMPOSE_FILE} exec -T redis redis-cli -a ${REDIS_PASSWORD:-password} ping > /dev/null 2>&1; then
+                                echo "✓ Redis is healthy"
+                                break
+                            fi
+                            RETRIES=$((RETRIES - 1))
+                            sleep 2
+                        done
+                        
+                        if [ $RETRIES -eq 0 ]; then
+                            echo "✗ Redis health check failed"
+                            docker compose -f ${COMPOSE_FILE} logs redis
+                            exit 1
+                        fi
+                        
+                        # Check SeaweedFS S3 API
+                        RETRIES=5
+                        while [ $RETRIES -gt 0 ]; do
+                            if docker compose -f ${COMPOSE_FILE} exec -T seaweedfs-staging curl -f http://localhost:8333/ > /dev/null 2>&1; then
+                                echo "✓ SeaweedFS S3 API is healthy"
+                                break
+                            fi
+                            RETRIES=$((RETRIES - 1))
+                            sleep 2
+                        done
+                        
+                        if [ $RETRIES -eq 0 ]; then
+                            echo "✗ SeaweedFS health check failed"
+                            docker compose -f ${COMPOSE_FILE} logs seaweedfs-staging
+                            exit 1
+                        fi
+                        
+                        # Check Worker status
+                        if docker compose -f ${COMPOSE_FILE} exec -T worker-staging ps aux | grep -q "worker"; then
+                            echo "✓ Worker is running"
+                        else
+                            echo "Warning: Worker status check inconclusive"
+                        fi
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                sh '''
+                    echo "=== External Network Status ==="
+                    docker compose -f ${COMPOSE_FILE} ps || true
+                '''
+            }
+        }
+        failure {
+            script {
+                sh '''
+                    echo "=== Deployment Failed - Collecting Logs ==="
+                    docker compose -f ${COMPOSE_FILE} logs --tail=50 || true
+                '''
+            }
+        }
+        success {
+            echo "✓ External Network Deployment successful!"
+        }
+    }
+}

@@ -10,8 +10,8 @@ RUN npm install -g pnpm@11.5.2
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --store-dir=/root/.local/share/pnpm/store
+#RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+RUN pnpm install --frozen-lockfile --store-dir=/root/.local/share/pnpm/store
 
 # ソースコードをコピーして JavaScript にコンパイル
 COPY src ./src
@@ -54,8 +54,8 @@ COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN npm install -g pnpm@11.5.2
 
-RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
-    pnpm install --prod --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store \
+#RUN --mount=type=cache,id=pnpm,target=/home/node/.local/share/pnpm/store,uid=1000,gid=1000 \
+RUN pnpm install --prod --frozen-lockfile --store-dir=/home/node/.local/share/pnpm/store \
     && pnpm store prune
 
 # ★ 1のステージで出来上がった「JavaScriptのファイルだけ」をコピー

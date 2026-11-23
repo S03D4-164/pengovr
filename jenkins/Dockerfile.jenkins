@@ -1,0 +1,8 @@
+FROM jenkins/jenkins:lts-alpine
+
+USER root
+
+# Docker CLI / Buildx / Compose をインストール
+RUN apk add --no-cache docker-cli docker-cli-buildx docker-compose
+
+USER jenkins

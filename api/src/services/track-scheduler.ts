@@ -92,7 +92,7 @@ export const initTrackScheduler = async (
         }
       }
     },
-    { connection: redisConnection },
+    { connection: redisConnection as any },
   );
 
   worker.on('error', (err) => {
