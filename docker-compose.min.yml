@@ -94,6 +94,20 @@ services:
     network_mode: host
     restart: unless-stopped
 
+  # Mongo Express - MongoDB GUI Management
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    environment:
+      ME_CONFIG_MONGODB_URL: ${MONGODB_URI}
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+      ME_CONFIG_SITE_BASEURL: /mongo-express/
+    depends_on:
+      - mongo1
+    network_mode: host
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge
